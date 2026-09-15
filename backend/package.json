@@ -1,0 +1,9 @@
+{
+  "name": "codechronicle-backend-launcher",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/dev.ps1",
+    "test": ".venv\\Scripts\\python.exe -m pytest"
+  }
+}
