@@ -1,307 +1,987 @@
-# CodeChronicle
+# CodeBase Time Machine
 
-Phase 8 adds deterministic historical architecture snapshots, commit/tag comparisons, cycle and
-dependency evolution, structural drift baselines, and explicit policy-rule violations. See
-[Architecture evolution](docs/architecture-evolution.md).
+**CodeBase Time Machine** is a software engineering tool that helps developers understand how a codebase evolved over time.
 
-CodeChronicle is a local explorer for public GitHub repositories. It indexes default-branch Git
-history, the current HEAD source snapshot, deterministic symbol history, public GitHub
-development context, and a dependency graph. Its optional local Ollama assistant answers software
-archaeology questions from cited repository evidence. It connects commits and symbols to pull
-requests, issues, discussions, architecture, and potential change impact through a Next.js
-interface and typed FastAPI API.
+Instead of only showing what the code looks like today, it analyzes the history of a public GitHub repository to explain:
 
-**CodeChronicle never executes code from analyzed repositories.** It does not install their
-dependencies, import their modules, invoke their build tools, or run their scripts and tests.
+- when code was introduced
+- how functions and classes changed
+- why certain changes were made
+- which pull requests and issues are connected to those changes
+- how different parts of the codebase depend on each other
+- how the architecture of the project changed over time
 
-## Implemented scope
+It acts like a **time machine for a software repository**.
 
-- Canonical public `github.com/owner/repository` ingestion with bare clone/fetch storage.
-- Default-branch commits, parents, changed files, renames, tags, bounded on-demand diffs, and
-  refresh/rewrite reconciliation.
-- Current HEAD tracked-file discovery using `git ls-tree` and source reads using `git cat-file`.
-- Tree-sitter parsing for Python, JavaScript, TypeScript, TSX, Java, C, C++, Go, and PHP.
-- Normalized functions, classes, methods, constructors, interfaces, enums, structs, traits,
-  modules, source ranges, signatures, nesting, documentation where available, and imports.
-- File tree, lazy source viewer with line numbers, symbol outline, and PostgreSQL symbol search.
-- Incremental code indexing by Git blob SHA, including changed, deleted, and same-blob renamed
-  files.
-- Historical file and symbol lineages with introductions, body/signature/documentation changes,
-  renames, moves, deletions, and conservative reintroductions.
-- Repository and symbol timelines, historical source, bounded version comparisons, commit-level
-  symbol changes, Git blame, previous-name search, and historical file viewing.
-- Incremental historical refresh, rewrite/stale detection, explicit history limits, and stable
-  lineage UUIDs.
-- Read-only GitHub metadata synchronization for pull requests, genuine issues, labels,
-  conversation comments, review comments, milestones, and lightweight public identities.
-- Provenance-preserving commit-to-PR and PR-to-issue links, including affected-symbol context,
-  cross-repository reference metadata, incremental upserts, and explicit rate-limit state.
-- Deterministic repository, module, file, symbol, and external-package dependency nodes with
-  evidence-bearing import, call, inheritance, containment, aggregate, and co-change edges.
-- Bounded architecture, node detail, dependency path, cycle, hotspot, coupling, and potential
-  impact APIs plus an interactive React Flow explorer.
-- Immutable-Git architecture snapshots, release comparisons, dependency/cycle events, coupling
-  trends, structural drift baselines, explicit dependency rules, and violation intervals.
-- Local Ollama health/model checks, normalized evidence chunking, incremental content-hash
-  embeddings in pgvector, model/dimension safety, and hybrid deterministic/lexical/vector retrieval.
-- Repository-scoped Ask UI with contextual actions from code, symbol, commit, PR, issue, and
-  architecture views, structured grounded answers, validated citations, evidence sufficiency,
-  confidence labels, follow-up context, and safe low-evidence behavior.
-- `TASK_EXECUTION_MODE=local` for native Windows development without Redis/Celery, plus the
-  existing Docker/Celery execution path.
+---
 
-This repository implements through Phase 8 and stops before Phase 9. It does not use cloud LLMs,
-analyze private repositories, modify analyzed code, create commits or pull requests, infer
-runtime architecture, or attribute regressions.
+## What does it do?
 
-## Architecture
+A developer provides a public GitHub repository URL.
 
-```mermaid
-flowchart TD
-  Browser --> UI[Next.js + TanStack Query]
-  UI --> API[FastAPI]
-  API --> DB[(PostgreSQL)]
-  API --> Executor{Task executor}
-  Executor -->|local| Thread[Local background thread]
-  Executor -->|celery| Redis[(Redis)]
-  Redis --> Worker[Celery worker]
-  Thread --> Pipeline[Git, code, history, GitHub, and graph indexes]
-  Worker --> Pipeline
-  Pipeline --> GitHub[Public Git and read-only REST API]
-  Pipeline --> Cache[UUID bare Git cache]
-  Pipeline --> DB
-  Pipeline --> Evidence[Normalized evidence + pgvector]
-  UI --> Ask[Repository Ask flow]
-  Ask --> API
-  API --> Retrieve[Deterministic + lexical + vector retrieval]
-  Retrieve --> Ollama[Local Ollama]
-  Evidence --> Retrieve
+CodeBase Time Machine then analyzes the repository and builds a historical view of the project using:
+
+- Git commits
+- file changes
+- source code
+- functions and classes
+- pull requests
+- issues
+- comments and code reviews
+- dependency relationships
+- architecture information
+- local AI using Ollama
+
+The goal is to help developers understand not only:
+
+> **What does this code do?**
+
+but also:
+
+> **Why does this code exist?**
+
+---
+
+## Main Features
+
+### Git History Explorer
+
+CodeBase Time Machine reads the Git history of the repository and allows users to explore:
+
+- commits
+- commit authors
+- changed files
+- additions and deletions
+- file renames
+- tags
+- commit diffs
+- repository history
+
+This creates the foundation for understanding how the project developed over time.
+
+---
+
+### Code Explorer
+
+The application analyzes the current source code and provides a repository browser.
+
+It can detect structures such as:
+
+- functions
+- classes
+- methods
+- constructors
+- interfaces
+- enums
+- structs
+- modules
+- imports
+
+The code explorer allows users to browse files, inspect symbols, search the repository, and understand the structure of the project.
+
+Supported languages include:
+
+- Python
+- JavaScript
+- TypeScript
+- TSX
+- Java
+- C
+- C++
+- Go
+- PHP
+
+---
+
+## Code History and Time Travel
+
+CodeBase Time Machine tracks the history of individual functions, classes, methods, and files.
+
+For example:
+
+```text
+get_user()
+
+    ↓ modified
+
+get_user()
+
+    ↓ renamed
+
+find_user()
+
+    ↓ moved
+
+UserService.find_user()
 ```
 
-The backend uses SQLAlchemy 2, psycopg, Alembic, Pydantic settings, structured logging, and
-Tree-sitter. Tests use pytest and a real PostgreSQL schema; the frontend uses TypeScript,
-React, Tailwind, Vitest, Testing Library, ESLint, and Prettier.
+For a symbol, the system can identify:
 
-## Run with Docker
+- when it was introduced
+- which commit introduced it
+- who introduced it
+- when its body changed
+- when its signature changed
+- when it was renamed
+- when it was moved
+- when it was deleted
+- when it was reintroduced
 
-Install Docker Desktop and stop other processes on ports 3000 and 8000. From the project root:
+Users can also view older versions of source code and compare historical versions.
 
-```powershell
-cd "D:\swe project"
-if (!(Test-Path .env)) { Copy-Item .env.example .env }
-docker compose config --quiet
-docker compose up --build
+---
+
+## GitHub Pull Requests and Issues
+
+Git history tells us **what changed**, but pull requests and issues often explain **why it changed**.
+
+CodeBase Time Machine connects repository history with public GitHub development information such as:
+
+- pull requests
+- issues
+- labels
+- PR descriptions
+- issue descriptions
+- comments
+- review comments
+- commits inside pull requests
+
+This allows relationships such as:
+
+```text
+Issue #17
+    ↓
+Pull Request #42
+    ↓
+Commit abc123
+    ↓
+UserService.find_user()
 ```
 
-Compose explicitly uses Celery mode and applies migrations before the API starts. Open:
+This makes it easier to understand the reason behind a piece of code.
 
-- [CodeChronicle](http://localhost:3000)
-- [API documentation](http://localhost:8000/docs)
-- [Liveness](http://localhost:8000/api/health)
-- [Dependency status](http://localhost:8000/api/system/status)
+---
 
-`docker compose down` stops the services without deleting their data volumes.
+## Dependency Graph
 
-## Native Windows development in VS Code
+CodeBase Time Machine analyzes relationships between different parts of the repository.
 
-Python 3.12+, Node.js 20.9+, Git, and PostgreSQL are required. Docker Desktop can provide only
-PostgreSQL; Redis and Celery are not required. Open two VS Code terminals and run:
+It can identify relationships such as:
 
-Backend terminal:
+```text
+Controller
+    ↓
+Service
+    ↓
+Repository
+    ↓
+Model
+```
+
+The dependency graph can include:
+
+- imports
+- function calls
+- inheritance
+- file dependencies
+- module dependencies
+- external package dependencies
+
+The graph can be explored visually.
+
+---
+
+## Impact Analysis
+
+Before changing an important function or file, developers can inspect which parts of the repository may depend on it.
+
+For example:
+
+```text
+PaymentService
+      ↑
+CheckoutController
+      ↑
+CheckoutPage
+```
+
+If `PaymentService` changes, CodeBase Time Machine can show the code that may potentially be affected.
+
+This helps developers understand the possible impact of a change before modifying the code.
+
+---
+
+## Code Hotspots
+
+The application can identify areas of the repository that are both frequently changed and structurally important.
+
+Hotspot information can consider:
+
+- number of changes
+- number of contributors
+- incoming dependencies
+- outgoing dependencies
+- dependency importance
+- historical activity
+
+A hotspot does **not** mean that the code is bad.
+
+It simply identifies code that may deserve additional attention because it changes often or is important to other parts of the project.
+
+---
+
+## Change Coupling
+
+Some files may not directly import each other but may repeatedly change together in the same commits.
+
+CodeBase Time Machine detects these relationships.
+
+For example:
+
+```text
+auth_controller.py
+        ↕
+auth_service.py
+```
+
+If these files frequently change together, they may have an important logical relationship that is not obvious from static dependencies alone.
+
+---
+
+## Circular Dependency Detection
+
+The dependency graph can also detect circular relationships such as:
+
+```text
+Module A
+   ↓
+Module B
+   ↓
+Module C
+   ↓
+Module A
+```
+
+These cycles can be displayed and inspected in the architecture view.
+
+---
+
+# Software Archaeology
+
+CodeBase Time Machine also performs deeper historical analysis of the repository.
+
+For a function, class, file, or module, it can analyze:
+
+- code age
+- original name
+- original location
+- number of modifications
+- renames
+- moves
+- major rewrites
+- contributors
+- stability
+- volatility
+- deleted code
+- historical versions
+
+This helps developers investigate where code originally came from and how it reached its current form.
+
+---
+
+## Code Provenance
+
+For a symbol such as:
+
+```text
+UserService.find_user()
+```
+
+CodeBase Time Machine may reconstruct a history like:
+
+```text
+Introduced as:
+get_user()
+
+src/users.py
+
+        ↓
+
+Renamed:
+find_user()
+
+        ↓
+
+Moved:
+src/services/user_service.py
+
+        ↓
+
+Major rewrite
+
+        ↓
+
+Current:
+UserService.find_user()
+```
+
+This provides a complete historical identity for important code.
+
+---
+
+## Deleted Code Search
+
+Code that no longer exists can still be important when understanding old commits or design decisions.
+
+CodeBase Time Machine can search historical symbols and files that have been deleted.
+
+Examples include:
+
+- deleted functions
+- deleted classes
+- old file names
+- renamed functions
+- previous implementations
+
+Users can inspect their last known source code and history.
+
+---
+
+## Historical Contributors
+
+The system analyzes which contributors have historically worked on different parts of the codebase.
+
+For a file or symbol it can show:
+
+- contributors
+- number of historical changes
+- contribution frequency
+- recent activity
+- introduction history
+
+These metrics represent repository activity only.
+
+They are not intended to measure developer skill or organizational ownership.
+
+---
+
+# Architecture Explorer
+
+CodeBase Time Machine automatically builds a high-level view of the repository architecture.
+
+For example:
+
+```text
+Frontend
+    ↓
+API
+    ↓
+Services
+    ↓
+Repositories
+    ↓
+Database
+```
+
+Users can explore architecture at different levels:
+
+```text
+Component
+    ↓
+Module
+    ↓
+File
+    ↓
+Symbol
+```
+
+This makes large repositories easier to understand.
+
+---
+
+# Architecture Time Machine
+
+One of the main features of CodeBase Time Machine is the ability to inspect how software architecture changed over time.
+
+Instead of viewing only the current architecture, users can inspect historical architecture snapshots.
+
+Example:
+
+```text
+2023
+
+Controller
+    ↓
+Service
+    ↓
+Repository
+```
+
+Later:
+
+```text
+2025
+
+Controller ─────────→ Repository
+    ↓
+Service
+    ↓
+Repository
+```
+
+CodeBase Time Machine can identify when architectural relationships were introduced or removed.
+
+---
+
+## Architecture Comparison
+
+Two points in repository history can be compared.
+
+For example:
+
+```text
+v1.0
+vs
+v2.0
+```
+
+The comparison can show:
+
+- modules added
+- modules removed
+- dependencies added
+- dependencies removed
+- cycles introduced
+- cycles resolved
+- component changes
+- architecture metric changes
+
+---
+
+## Architecture Drift
+
+Users can select an architecture snapshot as a baseline.
+
+CodeBase Time Machine can then compare the current architecture against that baseline.
+
+It may show:
+
+```text
+Baseline
+    ↓
+Current Architecture
+
++ 4 modules
+- 1 module
+
++ 12 dependencies
+- 3 dependencies
+
++ 1 dependency cycle
+```
+
+Architecture drift represents **structural change**.
+
+It does not automatically mean the architecture became worse.
+
+---
+
+## Architecture Rules
+
+Users can define simple architectural rules.
+
+For example:
+
+```text
+Controller
+    ↓ allowed
+Service
+
+Service
+    ↓ allowed
+Repository
+```
+
+and:
+
+```text
+Controller
+    ✕
+Repository
+```
+
+If a direct `Controller → Repository` dependency appears, CodeBase Time Machine can detect it.
+
+It can also determine:
+
+- when the relationship first appeared
+- which commit introduced it
+- which pull request was related
+- when the violation was later removed
+
+---
+
+# AI-Powered Repository Questions
+
+CodeBase Time Machine includes a local AI assistant powered by **Ollama**.
+
+The AI runs locally and uses repository evidence collected by the system.
+
+Users can ask questions such as:
+
+```text
+Why does this function exist?
+```
+
+```text
+Why was this condition added?
+```
+
+```text
+When was this class introduced?
+```
+
+```text
+Which PR introduced this behavior?
+```
+
+```text
+What issue caused this change?
+```
+
+```text
+What depends on this service?
+```
+
+```text
+What could be affected if I change this?
+```
+
+```text
+How did this module evolve?
+```
+
+```text
+When did this architecture dependency appear?
+```
+
+---
+
+## Evidence-Grounded AI
+
+The AI does not simply inspect the current source code.
+
+It retrieves evidence from:
+
+```text
+Git commits
+      +
+Symbol history
+      +
+Diffs
+      +
+Pull requests
+      +
+Issues
+      +
+Reviews
+      +
+Git blame
+      +
+Dependency graph
+      +
+Architecture history
+```
+
+This information is retrieved using a combination of:
+
+- deterministic relationships
+- normal text search
+- semantic search
+- vector embeddings
+
+The relevant evidence is then provided to the local Ollama model.
+
+---
+
+## Example
+
+A developer selects:
+
+```python
+if user is None:
+    return None
+```
+
+and asks:
+
+```text
+Why does this check exist?
+```
+
+CodeBase Time Machine may discover:
+
+```text
+Code line
+    ↓
+Git blame
+    ↓
+Commit abc123
+    ↓
+Pull Request #42
+    ↓
+Issue #17
+```
+
+and produce an answer explaining that the check was introduced while fixing the issue described in that pull request.
+
+The answer also includes links to the supporting evidence.
+
+If the repository does not contain enough evidence to determine the reason, CodeBase Time Machine says that the reason is unknown rather than inventing an explanation.
+
+---
+
+# Local AI
+
+CodeBase Time Machine uses **Ollama** instead of a paid cloud AI API.
+
+Example configuration:
+
+```env
+LLM_PROVIDER=ollama
+OLLAMA_BASE_URL=http://localhost:11434
+
+OLLAMA_LLM_MODEL=qwen3:4b
+OLLAMA_EMBEDDING_MODEL=all-minilm
+```
+
+Example models currently used during development:
+
+```text
+qwen3:4b
+all-minilm
+```
+
+The AI layer is optional.
+
+Repository analysis, Git history, code browsing, architecture, and historical analysis continue working even when Ollama is not running.
+
+---
+
+# Technology Stack
+
+## Frontend
+
+- Next.js
+- React
+- TypeScript
+- Tailwind CSS
+- TanStack Query
+- React Flow
+
+## Backend
+
+- Python
+- FastAPI
+- SQLAlchemy
+- Alembic
+- Pydantic
+
+## Database
+
+- PostgreSQL
+- pgvector
+
+## Repository Analysis
+
+- Git
+- Tree-sitter
+- NetworkX
+
+## AI
+
+- Ollama
+- Local LLM
+- Local embedding model
+- Retrieval-Augmented Generation (RAG)
+
+## Optional Background Processing
+
+- Redis
+- Celery
+
+CodeBase Time Machine can also run locally without Redis or Celery.
+
+---
+
+# How It Works
+
+The overall pipeline looks like this:
+
+```text
+Public GitHub Repository
+          ↓
+      Git Analysis
+          ↓
+   Static Code Analysis
+          ↓
+    Symbol History
+          ↓
+ PR / Issue Context
+          ↓
+   Dependency Graph
+          ↓
+ Architecture Analysis
+          ↓
+ Software Archaeology
+          ↓
+Architecture History
+          ↓
+  Evidence Documents
+          ↓
+ Local Embeddings
+          ↓
+ PostgreSQL + pgvector
+          ↓
+  Hybrid Retrieval
+          ↓
+       Ollama
+          ↓
+Grounded Explanation
+```
+
+---
+
+# Running the Project
+
+## Requirements
+
+Install:
+
+- Git
+- Python
+- Node.js
+- PostgreSQL
+- pgvector
+
+For AI features also install:
+
+- Ollama
+
+Docker is not required for normal local development.
+
+---
+
+## Backend
+
+From the backend directory:
 
 ```cmd
 cd /d "D:\swe project\backend"
-npm run dev
 ```
 
-Frontend terminal:
+Activate the Python virtual environment:
+
+```cmd
+.venv\Scripts\activate
+```
+
+Start FastAPI:
+
+```cmd
+uvicorn app.main:app --reload
+```
+
+The backend runs at:
+
+```text
+http://localhost:8000
+```
+
+API documentation:
+
+```text
+http://localhost:8000/docs
+```
+
+---
+
+## Frontend
+
+Open another terminal:
 
 ```cmd
 cd /d "D:\swe project\frontend"
+```
+
+Run:
+
+```cmd
 npm run dev
 ```
 
-The backend command creates `.env` and `.venv` when missing, installs locked Python dependencies
-when needed, starts the Compose PostgreSQL service when port 5432 is unavailable, applies
-migrations, and launches Uvicorn in `TASK_EXECUTION_MODE=local`. The frontend command stops an
-existing Compose frontend when necessary and launches Next.js on port 3000. Both commands detect
-unrelated processes already occupying their ports and report an actionable error.
-
-Ollama is optional. To enable Ask, install Ollama, choose and pull one chat model and one embedding
-model, then set `OLLAMA_LLM_MODEL` and `OLLAMA_EMBEDDING_MODEL` in the root `.env`. See
-[Local Ollama setup](docs/ollama.md) and [RAG architecture](docs/rag.md). All Phase 1–5 pages work
-when Ollama is stopped.
-
-To test Celery natively, set `TASK_EXECUTION_MODE=celery`, start Redis, then run this additional
-backend terminal. The solo pool is a Windows development convenience:
-
-```cmd
-cd /d "D:\swe project\backend"
-.venv\Scripts\python.exe -m celery -A app.workers.celery_app:celery_app worker --loglevel=info --pool=solo
-```
-
-## Configuration limits
-
-| Setting | Default | Purpose |
-| --- | ---: | --- |
-| `MAX_REPOSITORY_SIZE_MB` | 500 | Bare Git cache limit |
-| `MAX_COMMITS` | 10000 | Default-branch history limit |
-| `MAX_REPOSITORY_FILES` | 50000 | Current tracked-file limit |
-| `MAX_SOURCE_FILE_SIZE_BYTES` | 1000000 | Source parsing/content limit |
-| `MAX_PARSE_TIME_PER_FILE_SECONDS` | 2 | Tree-sitter per-file time limit |
-| `MAX_DIFF_SIZE_BYTES` | 500000 | On-demand diff response limit |
-| `MAX_HISTORY_COMMITS` | 2000 | Historical commits parsed per repository |
-| `MAX_HISTORICAL_FILES` | 20000 | Changed historical files parsed per run |
-| `MAX_HISTORICAL_SYMBOL_SOURCE_BYTES` | 100000 | Stored/fetched symbol source limit |
-| `MAX_HISTORY_INDEX_TIME_SECONDS` | 900 | Historical indexing time budget |
-| `MAX_BLAME_LINES` | 500 | Maximum lines returned by one blame request |
-| `SYMBOL_MATCH_THRESHOLD` | 0.86 | General lineage match threshold |
-| `SYMBOL_RENAME_MATCH_THRESHOLD` | 0.9 | Rename/move match threshold |
-| `GITHUB_TOKEN` | empty | Optional server-only token for higher public API limits |
-| `MAX_GITHUB_PULL_REQUESTS` | 500 | Pull requests stored per repository |
-| `MAX_GITHUB_ISSUES` | 1000 | Genuine issues stored per repository |
-| `MAX_GITHUB_COMMENTS` | 5000 | Issue and PR conversation comments per sync |
-| `MAX_GITHUB_REVIEW_COMMENTS` | 5000 | Code review comments per sync |
-| `MAX_GITHUB_BODY_LENGTH` | 200000 | Stored bytes for each external text body |
-| `GITHUB_REQUEST_TIMEOUT_SECONDS` | 15 | Timeout for each GitHub request |
-| `GITHUB_MAX_RETRIES` | 3 | Temporary-failure retry limit |
-| `MAX_GRAPH_NODES` | 50000 | Persisted dependency-node limit |
-| `MAX_GRAPH_EDGES` | 200000 | Persisted dependency-edge limit |
-| `MAX_GRAPH_RESPONSE_NODES` | 500 | Nodes returned in one graph view |
-| `MAX_GRAPH_DEPTH` | 5 | Maximum subgraph, path, and impact traversal depth |
-| `MAX_CALL_RESOLUTION_CANDIDATES` | 20 | Ambiguity guard for symbol resolution |
-| `MAX_FILES_PER_COMMIT_FOR_COUPLING` | 100 | Excludes noisy commits from coupling |
-| `MAX_GRAPH_BUILD_TIME_SECONDS` | 900 | Dependency graph indexing time budget |
-| `ARCHITECTURE_SNAPSHOT_STRATEGY` | `adaptive` | Snapshot selection policy |
-| `ARCHITECTURE_SNAPSHOT_INTERVAL_COMMITS` | 25 | Interval strategy spacing |
-| `MAX_ARCHITECTURE_SNAPSHOTS` | 500 | Persisted historical snapshot cap |
-| `MAX_HISTORICAL_GRAPH_NODES` | 5000 | Node cap for one historical snapshot |
-| `MAX_HISTORICAL_GRAPH_EDGES` | 20000 | Edge cap for one historical snapshot |
-| `MAX_ARCHITECTURE_HISTORY_COMMITS` | 2000 | Git-history scan cap |
-| `MAX_ARCHITECTURE_HISTORY_BUILD_SECONDS` | 900 | Architecture indexing time budget |
-| `ARCHITECTURE_RULE_MIN_EDGE_CONFIDENCE` | 0.8 | Minimum confidence for layer rules |
-| `LLM_PROVIDER` | `ollama` | Local AI provider; cloud providers are unsupported |
-| `OLLAMA_BASE_URL` | local Ollama URL | Credential-free local Ollama origin |
-| `OLLAMA_LLM_MODEL` | empty | Explicit chat model name |
-| `OLLAMA_EMBEDDING_MODEL` | empty | Explicit embedding model name |
-| `OLLAMA_REQUEST_TIMEOUT_SECONDS` | 180 | Embedding and generation timeout |
-| `AI_EMBEDDING_BATCH_SIZE` | 16 | Evidence documents per embedding request |
-| `RAG_TOP_K_VECTOR` | 12 | Semantic candidates before retrieval fusion |
-| `RAG_TOP_K_LEXICAL` | 12 | Lexical candidates before retrieval fusion |
-| `RAG_TOP_K_FINAL` | 12 | Default fused evidence result count |
-| `RAG_MAX_CONTEXT_CHARS` | 4000 | Maximum serialized RAG evidence context |
-| `RAG_MAX_EVIDENCE_ITEMS` | 6 | Maximum evidence records sent to the LLM |
-| `RAG_MAX_DIFF_CHARS` | 8000 | Maximum characters from one diff evidence item |
-| `MAX_EMBEDDING_CHUNK_CHARS` | 5000 | Evidence chunk size limit |
-| `MAX_DIFF_EMBEDDING_CHUNKS_PER_COMMIT` | 20 | Diff chunk cap per commit |
-| `AI_MAX_ANSWER_CHARS` | 12000 | Maximum grounded answer length |
-
-`GITHUB_TOKEN` is optional, used only by the backend, and never returned to the browser, logs, API
-responses, or database. Empty-token mode uses GitHub's unauthenticated public API limits.
-
-Excluded directory segments include `.git`, `node_modules`, `vendor`, `dist`, `build`, `.next`,
-`coverage`, `target`, `bin`, `obj`, `__pycache__`, `.venv`, and `venv`. Binary/media/archive/
-compiled files remain represented when useful but are never parsed or returned as source.
-
-## API surface
-
-| Method | Route | Purpose |
-| --- | --- | --- |
-| POST | `/api/repositories` | Validate a public URL and start/reuse analysis |
-| GET | `/api/repositories/{id}` | Repository state and active job ID |
-| POST | `/api/repositories/{id}/refresh` | Fetch and reconcile Git plus current code |
-| GET | `/api/jobs/{id}` | Persistent job progress and safe errors |
-| GET | `/api/repositories/{id}/commits` | Paginated commits |
-| GET | `/api/repositories/{id}/commits/{sha}` | Commit details and file changes |
-| GET | `/api/repositories/{id}/commits/{sha}/diff` | Bounded on-demand diff |
-| GET | `/api/repositories/{id}/stats` | Git-history statistics |
-| GET | `/api/repositories/{id}/tags` | Tag metadata |
-| GET | `/api/repositories/{id}/code/stats` | Current-code statistics and languages |
-| GET | `/api/repositories/{id}/files` | Hierarchical metadata-only file tree |
-| GET | `/api/repositories/{id}/files/{path}` | Indexed file metadata |
-| GET | `/api/repositories/{id}/files/{path}/content` | Bounded text content and line ranges |
-| GET | `/api/repositories/{id}/files/{path}/symbols` | File outline in source order |
-| GET | `/api/repositories/{id}/symbols` | Filtered, paginated symbol search |
-| GET | `/api/repositories/{id}/symbols/{symbol_id}` | Symbol context and children |
-| GET | `/api/repositories/{id}/imports` | Filtered, paginated imports |
-| POST | `/api/repositories/{id}/code/reindex` | Reindex the current snapshot only |
-| POST | `/api/repositories/{id}/history/reindex` | Start or continue historical indexing |
-| GET | `/api/repositories/{id}/history/status` | Historical job state, limits, and counts |
-| GET | `/api/repositories/{id}/history/events` | Filtered, paginated symbol-event timeline |
-| GET | `/api/repositories/{id}/history/lineages` | Search current and previous symbol names |
-| GET | `/api/repositories/{id}/symbols/{symbol_id}/history` | Resolve a current symbol to its lineage |
-| GET | `/api/repositories/{id}/lineages/{lineage_id}` | Symbol history and confidence metadata |
-| GET | `/api/repositories/{id}/lineages/{lineage_id}/versions` | Paginated historical versions |
-| GET | `/api/repositories/{id}/lineages/{lineage_id}/events` | Chronological lineage events |
-| GET | `/api/repositories/{id}/lineages/{lineage_id}/compare` | Bounded version diff |
-| GET | `/api/repositories/{id}/lineages/{lineage_id}/at/{sha}` | Symbol state at a commit |
-| GET | `/api/repositories/{id}/files/history?path=...` | File lineage and versions |
-| GET | `/api/repositories/{id}/files/content-at?path=...&commit_sha=...` | Historical text |
-| GET | `/api/repositories/{id}/commits/{sha}/symbols` | Symbols affected by a commit |
-| GET | `/api/repositories/{id}/blame?path=...` | Bounded HEAD blame lines |
-| POST | `/api/repositories/{id}/github/sync` | Start asynchronous public GitHub synchronization |
-| GET | `/api/repositories/{id}/github/status` | Sync progress, limits, rate limit, and safe errors |
-| GET | `/api/repositories/{id}/pull-requests` | Filtered, paginated pull requests |
-| GET | `/api/repositories/{id}/pull-requests/{number}` | PR discussion, commits, issues, and symbols |
-| GET | `/api/repositories/{id}/issues` | Filtered, paginated genuine issues |
-| GET | `/api/repositories/{id}/issues/{number}` | Issue discussion and related code evidence |
-| GET | `/api/repositories/{id}/commits/{sha}/context` | PR, issue, and symbol evidence for a commit |
-| GET | `/api/repositories/{id}/lineages/{lineage_id}/context` | GitHub evidence for symbol events |
-| POST | `/api/repositories/{id}/graph/reindex` | Build the current-HEAD dependency graph |
-| GET | `/api/repositories/{id}/graph/status` | Graph progress, freshness, limits, and counts |
-| GET | `/api/repositories/{id}/graph` | Bounded module, file, or symbol graph |
-| GET | `/api/repositories/{id}/graph/subgraph` | Bounded neighborhood around a node |
-| GET | `/api/repositories/{id}/graph/nodes/{node_id}` | Node metrics and relationships |
-| GET | `/api/repositories/{id}/graph/metrics` | Fan-in, fan-out, centrality, and hotspots |
-| GET | `/api/repositories/{id}/graph/cycles` | File or module dependency cycles |
-| GET | `/api/repositories/{id}/graph/coupling` | Git-history change coupling |
-| GET | `/api/repositories/{id}/graph/path` | Bounded directed dependency path |
-| GET | `/api/repositories/{id}/architecture` | Components, layers, and dependencies |
-| GET | `/api/repositories/{id}/impact` | Potential dependent impact for a file or symbol |
-| GET | `/api/system/ai-status` | Safe Ollama and configured-model availability |
-| GET | `/api/repositories/{id}/ai/status` | AI index progress, freshness, model, and dimension |
-| POST | `/api/repositories/{id}/ai/reindex` | Build or incrementally rebuild evidence embeddings |
-| POST | `/api/repositories/{id}/ask` | Grounded repository question with structured citations |
-| GET | `/api/repositories/{id}/ai/search` | Debug hybrid evidence search without vector disclosure |
-
-## Verification
-
-Run linting, formatting, type checks, unit tests, and the production frontend build from
-PowerShell:
-
-```powershell
-cd "D:\swe project"
-.\scripts\check.ps1
-```
-
-To include the PostgreSQL integration suite, set `TEST_DATABASE_URL` to a migrated PostgreSQL
-database and run `.\scripts\check.ps1 -Integration`.
-
-Individual commands:
+The application runs at:
 
 ```text
-backend:  python -m pytest
-          python -m ruff check . ../scripts
-          python -m ruff format --check . ../scripts
-          python -m mypy app
-frontend: npm run lint
-          npm run format:check
-          npm run typecheck
-          npm test
-          npm run build
+http://localhost:3000
 ```
 
-Integration tests create a random PostgreSQL schema, apply all Alembic migrations, exercise the
-real Git fixture, and remove the schema afterward. Set a dedicated `TEST_DATABASE_URL`; there is
-no SQLite fallback. See [verification results](docs/verification.md).
+---
 
-## Documentation
+## Ollama
 
-- [Architecture](docs/architecture.md)
-- [Git analysis](docs/git-analysis.md)
-- [Static analysis](docs/static-analysis.md)
-- [Historical analysis](docs/historical-analysis.md)
-- [GitHub context](docs/github-context.md)
-- [Dependency graph](docs/dependency-graph.md)
-- [Security](docs/security.md)
-- [Roadmap](docs/roadmap.md)
+Make sure Ollama is running.
+
+Check installed models:
+
+```cmd
+ollama list
+```
+
+Example:
+
+```text
+qwen3:4b
+all-minilm
+```
+
+Check Ollama:
+
+```cmd
+curl http://localhost:11434/api/tags
+```
+
+Check CodeBase Time Machine AI connection:
+
+```cmd
+curl http://localhost:8000/api/system/ai-status
+```
+
+---
+
+# Environment Configuration
+
+Create a `.env` file locally.
+
+Important variables include:
+
+```env
+DATABASE_URL=
+
+GITHUB_TOKEN=
+
+LLM_PROVIDER=ollama
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_LLM_MODEL=qwen3:4b
+OLLAMA_EMBEDDING_MODEL=all-minilm
+
+TASK_EXECUTION_MODE=local
+```
+
+Use the included:
+
+```text
+.env.example
+```
+
+as a reference.
+
+Never commit your real `.env` file because it may contain passwords or tokens.
+
+---
+
+# GitHub Access
+
+CodeBase Time Machine currently analyzes **public GitHub repositories only**.
+
+A GitHub token is optional.
+
+Without a token, GitHub's unauthenticated API rate limits apply.
+
+With a server-side token:
+
+```env
+GITHUB_TOKEN=...
+```
+
+the application can perform more GitHub API requests.
+
+The token is used only by the backend and should never be exposed to the frontend.
+
+---
+
+# Security
+
+Repositories are treated as untrusted input.
+
+CodeBase Time Machine does **not**:
+
+- execute repository source code
+- run repository scripts
+- run repository tests
+- install repository dependencies
+- execute binaries from analyzed repositories
+- modify analyzed repositories
+- push commits
+- create pull requests
+
+Repository analysis is based on Git data and static source-code analysis.
+
+---
+
+# Current Scope
+
+CodeBase Time Machine currently focuses on:
+
+- public GitHub repositories
+- repository history
+- static code analysis
+- code evolution
+- pull request and issue context
+- dependency analysis
+- impact analysis
+- software archaeology
+- architecture analysis
+- architecture evolution
+- local AI-assisted repository understanding
+
+Private repository access is not currently supported.
+
+---
+
+# Project Goal
+
+Modern codebases contain years of decisions that are difficult to understand from source code alone.
+
+A developer may find code like:
+
+```python
+if strange_condition:
+    do_something_unexpected()
+```
+
+The current code tells us **what happens**.
+
+CodeBase Time Machine tries to answer:
+
+```text
+Why was this added?
+
+Who added it?
+
+When was it added?
+
+What problem was being solved?
+
+Which issue or pull request discussed it?
+
+How has it changed since then?
+
+What other code depends on it?
+
+What would potentially be affected if it changed?
+
+How did the surrounding architecture evolve?
+```
+
+The goal is to make software history easier to explore and help developers understand not only **what a codebase is**, but **how and why it became that way**.
