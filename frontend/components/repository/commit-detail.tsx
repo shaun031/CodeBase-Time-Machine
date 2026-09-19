@@ -46,6 +46,12 @@ export function CommitView({ repoId, sha }: { repoId: string; sha: string }) {
         >
           Explain this change
         </Link>
+        <Link
+          className="action-link"
+          href={`/repos/${repoId}/investigate?commit=${commit.sha}`}
+        >
+          Investigate commit
+        </Link>
       </div>
       <section className="history-panel">
         <h2>Commit message</h2>

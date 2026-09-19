@@ -12,7 +12,7 @@ export function Workspace({ children }: { children: React.ReactNode }) {
           </span>
           Codebase Time Machine
         </Link>
-        <span className="mono version">CODECHRONICLE WORKSPACE</span>
+        <span className="mono version">CODEBASE TIME MACHINE WORKSPACE</span>
       </header>
       <main className="history-main">{children}</main>
     </div>

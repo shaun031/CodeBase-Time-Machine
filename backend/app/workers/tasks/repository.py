@@ -8,6 +8,7 @@ from app.services.github.indexer import index_github_repository
 from app.services.graph.builder import index_dependency_graph
 from app.services.historical_index import index_historical_repository
 from app.services.indexing import index_code_repository, index_repository
+from app.services.investigation.report import build_investigation
 from app.workers.celery_app import celery_app
 
 
@@ -49,3 +50,8 @@ def analyze_archaeology(repository_id: str, job_id: str) -> None:
 @celery_app.task(name="analyze_architecture_history", acks_late=True, reject_on_worker_lost=True)
 def analyze_architecture_history(repository_id: str, job_id: str) -> None:
     index_architecture_history(get_engine(), UUID(repository_id), UUID(job_id))
+
+
+@celery_app.task(name="build_bug_investigation", acks_late=True, reject_on_worker_lost=True)
+def build_bug_investigation(repository_id: str, job_id: str) -> None:
+    build_investigation(get_engine(), UUID(repository_id), UUID(job_id))

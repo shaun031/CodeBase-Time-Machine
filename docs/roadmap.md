@@ -1,10 +1,8 @@
 # Development roadmap
 
-Phase 8 is complete: deterministic architecture snapshots, comparison, dependency and cycle
-events, drift baselines, explicit policy rules, violation intervals, trends, APIs, and the
-Architecture Time Machine are implemented. SZZ and regression
-localization, stack-trace analysis, runtime tracing, and repository execution remain outside this
-phase.
+Phase 9 is complete: deterministic stack-trace resolution, error-text search, line history,
+regression ranges, conservative SZZ candidates, ranked evidence reports, and manual static bisect
+are implemented. Runtime tracing and repository execution remain outside this phase.
 
 | Phase | Scope | Status |
 | --- | --- | --- |
@@ -17,7 +15,7 @@ phase.
 | 6 | Ollama, embeddings, grounded RAG, and “Why does this exist?” | Complete |
 | 7 | Advanced software archaeology | Complete |
 | 8 | Architecture evolution | Complete |
-| 9 | Bug and regression investigation | Future |
+| 9 | Bug and regression investigation | Complete |
 | 10 | Local performance, polish, demo, and reliability | Future |
 
 Phase 3 adds deterministic history and conservative symbol identity across commits. It does not

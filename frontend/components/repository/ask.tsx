@@ -40,20 +40,18 @@ export function AskAssistant({
   const [question, setQuestion] = useState(initial.question ?? "");
   const [messages, setMessages] = useState<VisibleMessage[]>([]);
   const indexReady = index.data?.status === "ready" && !index.data.index_stale;
-  const ollamaReady = Boolean(
-    system.data?.available || index.data?.ollama_available,
+  const embeddingReady = Boolean(
+    system.data?.available && system.data.embedding_model_available,
   );
   const modelsReady = Boolean(
-    ollamaReady &&
-    ((system.data?.llm_model_available &&
-      system.data.embedding_model_available) ||
-      indexReady),
+    embeddingReady && system.data?.llm_model_available,
   );
+  const askReady = indexReady && modelsReady;
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
     const value = question.trim();
-    if (!value || !indexReady) return;
+    if (!value || !askReady) return;
     const conversation = messages.slice(-6).map((message) => ({
       role: message.role,
       content: message.content,
@@ -86,7 +84,7 @@ export function AskAssistant({
 
       <section className="history-panel ai-status-panel">
         <div>
-          <h2>Ask CodeChronicle</h2>
+          <h2>Ask Codebase Time Machine</h2>
           <p className="muted">
             Answers use indexed Git, code, GitHub, history, and dependency
             evidence. Ollama runs locally and repository data stays on this
@@ -99,9 +97,11 @@ export function AskAssistant({
           >
             {index.isPending
               ? "Checking index…"
-              : indexReady
-                ? "AI index ready"
-                : index.data?.status.replaceAll("_", " ")}
+              : index.isError
+                ? "Index status unavailable"
+                : indexReady
+                  ? "AI index ready"
+                  : index.data?.status.replaceAll("_", " ")}
           </span>
           {index.data && (
             <small>
@@ -119,21 +119,38 @@ export function AskAssistant({
         <section className="ai-unavailable" role="status">
           <strong>AI features unavailable</strong>
           <p>
-            {!system.data?.available
-              ? "Ollama is not running. Start Ollama; this page checks again automatically."
-              : "Install or configure both Ollama models; this page checks again automatically."}
+            {system.isError
+              ? `Could not check Ollama status: ${errorMessage(system.error)}`
+              : !system.data?.available
+                ? "Ollama server unavailable. Check the configured local URL; this page checks again automatically."
+                : !system.data.embedding_model_available
+                  ? `Embedding model ${system.data.embedding_model || "(not configured)"} is not installed. Pull or configure it to build the AI index.`
+                  : `LLM model ${system.data.llm_model || "(not configured)"} is not installed. Pull or configure it to ask questions.`}
           </p>
           <code>{system.data?.base_url_safe}</code>
         </section>
       )}
 
-      {modelsReady && !indexReady && (
+      {index.isError && (
+        <div className="error-panel" role="alert">
+          Could not load the repository AI index: {errorMessage(index.error)}
+          <button onClick={() => index.refetch()}>Try again</button>
+        </div>
+      )}
+
+      {embeddingReady && !indexReady && !index.isError && (
         <section className="history-panel ai-build-panel">
           <div>
             <h2>
-              {index.data?.index_stale
-                ? "AI index needs rebuilding"
-                : "Build the AI index"}
+              {index.data?.status === "failed"
+                ? "AI indexing failed"
+                : ["queued", "indexing"].includes(index.data?.status ?? "")
+                  ? "AI indexing in progress"
+                  : index.data?.index_stale
+                    ? "AI index needs rebuilding"
+                    : index.data?.status === "not_indexed"
+                      ? "Repository AI index not built"
+                      : "Build the AI index"}
             </h2>
             <p className="muted">
               Evidence is chunked and embedded in the background. Unchanged
@@ -213,7 +230,9 @@ export function AskAssistant({
             className={`ai-message ai-message-${message.role}`}
             key={indexNumber}
           >
-            <strong>{message.role === "user" ? "You" : "CodeChronicle"}</strong>
+            <strong>
+              {message.role === "user" ? "You" : "Codebase Time Machine"}
+            </strong>
             <p>{message.content}</p>
             {message.role === "assistant" && (
               <>
@@ -277,11 +296,11 @@ export function AskAssistant({
         <div>
           <small>
             {question.length} / 2,000
-            {!indexReady
-              ? " · You can type now; sending unlocks when the AI index is ready."
+            {!askReady
+              ? " · You can type now; sending unlocks when Ollama and the AI index are ready."
               : ""}
           </small>
-          <button disabled={!question.trim() || !indexReady || ask.isPending}>
+          <button disabled={!question.trim() || !askReady || ask.isPending}>
             {ask.isPending ? "Retrieving evidence…" : "Ask with evidence"}
           </button>
         </div>

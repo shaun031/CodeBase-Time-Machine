@@ -48,6 +48,11 @@ from app.db.models.history import (
     SymbolLineage,
     SymbolVersion,
 )
+from app.db.models.investigation import (
+    BisectSession,
+    Investigation,
+    InvestigationCandidateFeedback,
+)
 from app.db.models.repository import Repository, RepositoryStatus
 from app.db.models.tag import Tag
 
@@ -85,6 +90,9 @@ __all__ = [
     "SymbolLineage",
     "SymbolVersion",
     "SymbolChangeEvent",
+    "Investigation",
+    "BisectSession",
+    "InvestigationCandidateFeedback",
     "GitHubRepositoryMetadata",
     "GitHubUser",
     "GitHubPullRequest",

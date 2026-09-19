@@ -1,6 +1,6 @@
 # Current-snapshot static analysis
 
-CodeChronicle analyzes only the current default-branch HEAD. It never checks out or executes the
+Codebase Time Machine analyzes only the current default-branch HEAD. It never checks out or executes the
 repository. Git supplies the authoritative tracked-file list and immutable source blobs.
 
 ## Pipeline
@@ -55,7 +55,7 @@ The primary limits are `MAX_REPOSITORY_FILES`, `MAX_SOURCE_FILE_SIZE_BYTES`, and
 `MAX_PARSE_TIME_PER_FILE_SECONDS`. Content requests use the same source-size bound and reject binary
 files. Optional line ranges avoid returning irrelevant content.
 
-**CodeChronicle never executes analyzed code.** It never runs package managers, builds, scripts,
+**Codebase Time Machine never executes analyzed code.** It never runs package managers, builds, scripts,
 tests, repository binaries, or imports target Python modules.
 
 ## Limitations

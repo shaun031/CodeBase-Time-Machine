@@ -1,5 +1,4 @@
 import { Architecture } from "@/components/repository/architecture";
-import { Workspace } from "@/components/repository/workspace";
 
 export default async function ArchitecturePage({
   params,
@@ -10,9 +9,5 @@ export default async function ArchitecturePage({
 }) {
   const { repoId } = await params;
   const { file } = await searchParams;
-  return (
-    <Workspace>
-      <Architecture repoId={repoId} initialFileId={file} />
-    </Workspace>
-  );
+  return <Architecture repoId={repoId} initialFileId={file} />;
 }

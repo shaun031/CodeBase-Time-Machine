@@ -25,12 +25,14 @@ def test_system_status(client, monkeypatch, database, redis, expected):
     )
     monkeypatch.setattr(system, "check_database", lambda: database)
     monkeypatch.setattr(system, "check_redis", lambda: redis)
+    monkeypatch.setattr(system.OllamaService, "is_available", lambda self: True)
     response = client.get("/api/system/status")
     assert response.status_code == expected
     assert response.json() == {
         "backend": "ok",
         "database": "ok" if database else "unavailable",
         "redis": "ok" if redis else "unavailable",
+        "ollama": "ok",
     }
 
 
@@ -46,13 +48,25 @@ def test_system_status_does_not_require_redis_in_local_mode(client, monkeypatch)
         "check_redis",
         lambda: pytest.fail("Local mode must not connect to Redis"),
     )
+    monkeypatch.setattr(system.OllamaService, "is_available", lambda self: True)
     response = client.get("/api/system/status")
     assert response.status_code == 200
     assert response.json() == {
         "backend": "ok",
         "database": "ok",
         "redis": "not_required",
+        "ollama": "ok",
     }
+
+
+def test_system_status_reports_ollama_failure_without_degrading_backend(client, monkeypatch):
+    monkeypatch.setattr(system, "check_database", lambda: True)
+    monkeypatch.setattr(system.OllamaService, "is_available", lambda self: False)
+    response = client.get("/api/system/status")
+    assert response.status_code == 200
+    assert response.json()["database"] == "ok"
+    assert response.json()["redis"] == "not_required"
+    assert response.json()["ollama"] == "unavailable"
 
 
 def test_cors(client):

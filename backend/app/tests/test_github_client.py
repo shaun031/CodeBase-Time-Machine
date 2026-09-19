@@ -49,7 +49,7 @@ def test_github_client_paginates_and_uses_read_only_headers():
     assert len(page.items) == 101
     assert page.limited is False
     assert len(requests) == 2
-    assert requests[0].headers["user-agent"] == "CodeChronicle/1.0"
+    assert requests[0].headers["user-agent"] == "Codebase-Time-Machine/1.0"
     assert requests[0].headers["authorization"] == "Bearer server-secret"
     assert requests[0].method == "GET"
 

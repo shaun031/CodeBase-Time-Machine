@@ -12,6 +12,7 @@ import { HistoryExplorer } from "@/components/repository/history";
 import { SymbolHistory } from "@/components/repository/symbol-history";
 import { Architecture } from "@/components/repository/architecture";
 import { ArchitectureEvolution } from "@/components/repository/architecture-evolution";
+import { InvestigationWorkspace } from "@/components/repository/investigation-workspace";
 import { Archaeology } from "@/components/repository/archaeology";
 import { AskAssistant } from "@/components/repository/ask";
 import {
@@ -397,6 +398,7 @@ beforeEach(() => {
     backend: "ok",
     database: "ok",
     redis: "ok",
+    ollama: "unavailable",
   });
   vi.spyOn(api, "getRepository").mockResolvedValue(repo);
   vi.spyOn(api, "getAIStatus").mockResolvedValue({
@@ -1021,30 +1023,137 @@ beforeEach(() => {
   vi.spyOn(api, "getArchitectureAt").mockResolvedValue({
     snapshot: snapshots[1],
     nodes: [
-      { stable_key: "module:controller", node_type: "module", name: "controller", path: "controller", layer: "controller", confidence: 0.8, metrics: { fan_in: 0, fan_out: 1 } },
-      { stable_key: "module:service", node_type: "module", name: "service", path: "service", layer: "service", confidence: 0.8, metrics: { fan_in: 1, fan_out: 0 } },
+      {
+        stable_key: "module:controller",
+        node_type: "module",
+        name: "controller",
+        path: "controller",
+        layer: "controller",
+        confidence: 0.8,
+        metrics: { fan_in: 0, fan_out: 1 },
+      },
+      {
+        stable_key: "module:service",
+        node_type: "module",
+        name: "service",
+        path: "service",
+        layer: "service",
+        confidence: 0.8,
+        metrics: { fan_in: 1, fan_out: 0 },
+      },
     ],
-    edges: [{ source: "module:controller", target: "module:service", edge_type: "DEPENDS_ON", weight: 1, confidence: 1 }],
+    edges: [
+      {
+        source: "module:controller",
+        target: "module:service",
+        edge_type: "DEPENDS_ON",
+        weight: 1,
+        confidence: 1,
+      },
+    ],
     cycles: [],
     metrics: { dependency_density: 0.5 },
     source: "deterministic_static_analysis",
   });
   vi.spyOn(api, "compareArchitecture").mockResolvedValue({
-    from_snapshot: snapshots[0], to_snapshot: snapshots[1], nodes_added: [], nodes_removed: [], nodes_changed: [], edges_added: [], edges_removed: [], edges_changed: [], cycles_introduced: [], cycles_resolved: [], metrics_before: {}, metrics_after: {}, evolution_events: [], structural_drift: { score: 25, formula: "weighted Jaccard", interpretation: "Structural difference only." },
+    from_snapshot: snapshots[0],
+    to_snapshot: snapshots[1],
+    nodes_added: [],
+    nodes_removed: [],
+    nodes_changed: [],
+    edges_added: [],
+    edges_removed: [],
+    edges_changed: [],
+    cycles_introduced: [],
+    cycles_resolved: [],
+    metrics_before: {},
+    metrics_after: {},
+    evolution_events: [],
+    structural_drift: {
+      score: 25,
+      formula: "weighted Jaccard",
+      interpretation: "Structural difference only.",
+    },
   });
   vi.spyOn(api, "getArchitectureDrift").mockResolvedValue({
-    from_snapshot: snapshots[0], to_snapshot: snapshots[1], nodes_added: [], nodes_removed: [], nodes_changed: [], edges_added: [], edges_removed: [], edges_changed: [], cycles_introduced: [], cycles_resolved: [], metrics_before: {}, metrics_after: {}, evolution_events: [], structural_drift: { score: 25, formula: "weighted Jaccard", interpretation: "Structural difference only." }, baseline: { id: "baseline-1", name: "v1.0", snapshot_id: "snapshot-1", is_default: true, created_at: "2024-01-01T12:00:00Z" }, policy_violations: [],
+    from_snapshot: snapshots[0],
+    to_snapshot: snapshots[1],
+    nodes_added: [],
+    nodes_removed: [],
+    nodes_changed: [],
+    edges_added: [],
+    edges_removed: [],
+    edges_changed: [],
+    cycles_introduced: [],
+    cycles_resolved: [],
+    metrics_before: {},
+    metrics_after: {},
+    evolution_events: [],
+    structural_drift: {
+      score: 25,
+      formula: "weighted Jaccard",
+      interpretation: "Structural difference only.",
+    },
+    baseline: {
+      id: "baseline-1",
+      name: "v1.0",
+      snapshot_id: "snapshot-1",
+      is_default: true,
+      created_at: "2024-01-01T12:00:00Z",
+    },
+    policy_violations: [],
   });
-  vi.spyOn(api, "getArchitectureBaselines").mockResolvedValue([{ id: "baseline-1", name: "v1.0", snapshot_id: "snapshot-1", is_default: true, created_at: "2024-01-01T12:00:00Z" }]);
-  vi.spyOn(api, "createArchitectureBaseline").mockResolvedValue({ id: "baseline-2", name: "Architecture at bbbbbbbbbbbb", snapshot_id: "snapshot-2", is_default: false, created_at: "2024-02-01T12:00:00Z" });
+  vi.spyOn(api, "getArchitectureBaselines").mockResolvedValue([
+    {
+      id: "baseline-1",
+      name: "v1.0",
+      snapshot_id: "snapshot-1",
+      is_default: true,
+      created_at: "2024-01-01T12:00:00Z",
+    },
+  ]);
+  vi.spyOn(api, "createArchitectureBaseline").mockResolvedValue({
+    id: "baseline-2",
+    name: "Architecture at bbbbbbbbbbbb",
+    snapshot_id: "snapshot-2",
+    is_default: false,
+    created_at: "2024-02-01T12:00:00Z",
+  });
   vi.spyOn(api, "getArchitectureEvolution").mockResolvedValue([]);
-  vi.spyOn(api, "getArchitectureTrends").mockResolvedValue({ points: snapshots.map((item) => ({ commit_sha: item.commit_sha, dependency_density: item.metrics.dependency_density })), definitions: {} });
+  vi.spyOn(api, "getArchitectureTrends").mockResolvedValue({
+    points: snapshots.map((item) => ({
+      commit_sha: item.commit_sha,
+      dependency_density: item.metrics.dependency_density,
+    })),
+    definitions: {},
+  });
   vi.spyOn(api, "getArchitectureRules").mockResolvedValue([]);
   vi.spyOn(api, "getArchitectureViolations").mockResolvedValue([]);
-  vi.spyOn(api, "previewArchitectureRule").mockResolvedValue({ valid: true, snapshots_evaluated: 2, source_match_count: 2, target_match_count: 1, violation_count: 1 });
-  vi.spyOn(api, "createArchitectureRule").mockResolvedValue({ id: "rule-1", repository_id: repoId, name: "Controllers must not bypass services", rule_type: "forbidden_dependency", source_selector: { kind: "layer", value: "controller" }, target_selector: { kind: "layer", value: "repository" }, severity: "error", enabled: true, created_at: "2024-01-01T12:00:00Z", updated_at: "2024-01-01T12:00:00Z" });
+  vi.spyOn(api, "previewArchitectureRule").mockResolvedValue({
+    valid: true,
+    snapshots_evaluated: 2,
+    source_match_count: 2,
+    target_match_count: 1,
+    violation_count: 1,
+  });
+  vi.spyOn(api, "createArchitectureRule").mockResolvedValue({
+    id: "rule-1",
+    repository_id: repoId,
+    name: "Controllers must not bypass services",
+    rule_type: "forbidden_dependency",
+    source_selector: { kind: "layer", value: "controller" },
+    target_selector: { kind: "layer", value: "repository" },
+    severity: "error",
+    enabled: true,
+    created_at: "2024-01-01T12:00:00Z",
+    updated_at: "2024-01-01T12:00:00Z",
+  });
   vi.spyOn(api, "deleteArchitectureRule").mockResolvedValue(undefined);
-  vi.spyOn(api, "reindexArchitectureHistory").mockResolvedValue({ repository_id: repoId, job_id: jobId, status: "queued" });
+  vi.spyOn(api, "reindexArchitectureHistory").mockResolvedValue({
+    repository_id: repoId,
+    job_id: jobId,
+    status: "queued",
+  });
 });
 
 describe("AI assistant", () => {
@@ -1057,6 +1166,88 @@ describe("AI assistant", () => {
     expect(
       screen.getByRole("button", { name: "Ask with evidence" }),
     ).toBeDisabled();
+  });
+
+  it("shows a missing repository index when Ollama and its models are available", async () => {
+    vi.mocked(api.getAIStatus).mockResolvedValue({
+      provider: "ollama",
+      available: true,
+      base_url_safe: "http://127.0.0.1:11434",
+      llm_model: "qwen3:4b",
+      llm_model_available: true,
+      embedding_model: "all-minilm",
+      embedding_model_available: true,
+      message: null,
+    });
+    show(<AskAssistant repoId={repoId} initial={{}} />);
+    expect(
+      await screen.findByText("Repository AI index not built"),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Build AI index" }),
+    ).toBeEnabled();
+    expect(
+      screen.queryByText(/Ollama server unavailable/),
+    ).not.toBeInTheDocument();
+  });
+
+  it("distinguishes missing embedding models and AI status request failures", async () => {
+    vi.mocked(api.getAIStatus).mockResolvedValue({
+      provider: "ollama",
+      available: true,
+      base_url_safe: "http://127.0.0.1:11434",
+      llm_model: "qwen3:4b",
+      llm_model_available: true,
+      embedding_model: "all-minilm",
+      embedding_model_available: false,
+      message: null,
+    });
+    const first = show(<AskAssistant repoId={repoId} initial={{}} />);
+    expect(
+      await screen.findByText(/Embedding model all-minilm is not installed/),
+    ).toBeVisible();
+    first.unmount();
+
+    vi.mocked(api.getAIStatus).mockRejectedValue(
+      new ApiError(0, "Backend request failed"),
+    );
+    show(<AskAssistant repoId={repoId} initial={{}} />);
+    expect(
+      await screen.findByText(
+        /Could not check Ollama status: Backend request failed/,
+      ),
+    ).toBeVisible();
+    expect(
+      screen.queryByText(/Ollama server unavailable/),
+    ).not.toBeInTheDocument();
+  });
+
+  it("does not misdiagnose a repository index request failure as an Ollama failure", async () => {
+    vi.mocked(api.getAIStatus).mockResolvedValue({
+      provider: "ollama",
+      available: true,
+      base_url_safe: "http://127.0.0.1:11434",
+      llm_model: "qwen3:4b",
+      llm_model_available: true,
+      embedding_model: "all-minilm",
+      embedding_model_available: true,
+      message: null,
+    });
+    vi.mocked(api.getRepositoryAIStatus).mockRejectedValue(
+      new ApiError(404, "Repository not found", "REPOSITORY_NOT_FOUND"),
+    );
+    show(<AskAssistant repoId={repoId} initial={{}} />);
+    expect(
+      await screen.findByText(
+        /Could not load the repository AI index: Repository not found/,
+      ),
+    ).toBeVisible();
+    expect(
+      screen.queryByText(/Ollama server unavailable/),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Build AI index" }),
+    ).not.toBeInTheDocument();
   });
 
   it("submits a user-entered question when the index is ready", async () => {
@@ -1741,7 +1932,9 @@ describe("current architecture", () => {
 describe("architecture evolution", () => {
   it("travels through deterministic historical snapshots", async () => {
     show(<ArchitectureEvolution repoId={repoId} />);
-    expect(await screen.findByText("Architecture at bbbbbbbbbbbb")).toBeVisible();
+    expect(
+      await screen.findByText("Architecture at bbbbbbbbbbbb"),
+    ).toBeVisible();
     expect(screen.getByLabelText("Architecture timeline")).toHaveValue("1");
     expect((await screen.findAllByText("controller"))[0]).toBeVisible();
     expect(api.getArchitectureAt).toHaveBeenCalledWith(repoId, "b".repeat(40));
@@ -1750,19 +1943,131 @@ describe("architecture evolution", () => {
   it("keeps structural drift separate and previews policy rules", async () => {
     show(<ArchitectureEvolution repoId={repoId} />);
     fireEvent.click(await screen.findByRole("tab", { name: "Events" }));
-    expect(await screen.findByText("No structural changes were detected between indexed snapshots.")).toBeVisible();
+    expect(
+      await screen.findByText(
+        "No structural changes were detected between indexed snapshots.",
+      ),
+    ).toBeVisible();
     fireEvent.click(await screen.findByRole("tab", { name: "Drift" }));
-    expect(await screen.findByText("Structural difference only.")).toBeVisible();
+    expect(
+      await screen.findByText("Structural difference only."),
+    ).toBeVisible();
     expect(screen.getByText("Active policy violations: 0")).toBeVisible();
     expect(screen.getByLabelText("Architecture baseline")).toHaveValue("");
-    fireEvent.click(screen.getByRole("button", { name: "Use selected snapshot as baseline" }));
-    await waitFor(() => expect(api.createArchitectureBaseline).toHaveBeenCalledWith(repoId, {
-      name: "Architecture at bbbbbbbbbbbb",
-      snapshot_id: "snapshot-2",
-      is_default: false,
-    }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Use selected snapshot as baseline" }),
+    );
+    await waitFor(() =>
+      expect(api.createArchitectureBaseline).toHaveBeenCalledWith(repoId, {
+        name: "Architecture at bbbbbbbbbbbb",
+        snapshot_id: "snapshot-2",
+        is_default: false,
+      }),
+    );
     fireEvent.click(screen.getByRole("tab", { name: "Rules" }));
-    fireEvent.click(await screen.findByRole("button", { name: "Preview across history" }));
-    expect(await screen.findByText("2 source modules · 1 target modules · 1 historical violation.")).toBeVisible();
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Preview across history" }),
+    );
+    expect(
+      await screen.findByText(
+        "2 source modules · 1 target modules · 1 historical violation.",
+      ),
+    ).toBeVisible();
+  });
+});
+
+describe("bug investigation", () => {
+  it("submits editable stack evidence and renders ranked candidates", async () => {
+    const investigation = {
+      id: "investigation-1",
+      repository_id: repoId,
+      job_id: jobId,
+      status: "ready" as const,
+      input_type: "stack_trace",
+      created_at: "2024-01-01T12:00:00Z",
+      completed_at: "2024-01-01T12:00:01Z",
+      error: null,
+      result: {
+        failure: {
+          exception_type: "TypeError",
+          error_message: "missing value",
+          error_tokens: ["missing", "value"],
+          quoted_identifiers: [],
+          truncated: false,
+        },
+        resolved_frames: [
+          { file_path: "src/service.ts", line: 42, resolution_status: "exact" },
+        ],
+        regression_range: null,
+        top_candidates: [
+          {
+            rank: 1,
+            commit_sha: sha,
+            commit_id: "commit-1",
+            message: "Introduce failing line",
+            committed_at: "2024-01-01T12:00:00Z",
+            score: 0.7,
+            confidence: "strong candidate",
+            reasons: ["blamed_failing_line"],
+            signals: { blame: 1 },
+            evidence: [],
+            files: ["src/service.ts"],
+            symbols: ["loadData"],
+            pr_numbers: [],
+            issue_numbers: [],
+          },
+        ],
+        recent_changes: [],
+        error_search_results: [],
+        dependency_context: [],
+        architecture_context: [],
+        score_formula: "weighted deterministic signals",
+        score_meaning:
+          "The score orders investigation work; it is not a probability.",
+        facts: [],
+        limitations: ["Git history does not prove causation."],
+      },
+    };
+    const create = vi
+      .spyOn(api, "createInvestigation")
+      .mockResolvedValue(investigation);
+    vi.spyOn(api, "getInvestigation").mockResolvedValue(investigation);
+    show(<InvestigationWorkspace repoId={repoId} />);
+
+    const input = await screen.findByLabelText("Stack trace");
+    fireEvent.change(input, {
+      target: {
+        value:
+          "TypeError: missing value\n    at loadData (src/service.ts:42:9)",
+      },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Analyze failure" }));
+
+    await waitFor(() =>
+      expect(create).toHaveBeenCalledWith(
+        repoId,
+        expect.objectContaining({
+          stack_trace: expect.stringContaining("src/service.ts"),
+        }),
+      ),
+    );
+    expect(await screen.findByText("Introduce failing line")).toBeVisible();
+    expect(screen.getByText(/not a probability/)).toBeVisible();
+  });
+
+  it("opens prefilled line investigation links", async () => {
+    show(
+      <InvestigationWorkspace
+        repoId={repoId}
+        initialCommit={sha}
+        initialFile="src/service.ts"
+        initialLine="42"
+      />,
+    );
+    expect(await screen.findByDisplayValue("src/service.ts")).toBeVisible();
+    expect(screen.getByDisplayValue("42")).toBeVisible();
+    expect(
+      screen.getByRole("tab", { name: "Line Investigation" }),
+    ).toHaveAttribute("aria-selected", "true");
   });
 });

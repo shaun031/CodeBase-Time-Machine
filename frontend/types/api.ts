@@ -7,6 +7,7 @@ export interface SystemStatus {
   backend: "ok";
   database: ServiceStatus;
   redis: ServiceStatus;
+  ollama: "ok" | "unavailable";
 }
 export interface ApiErrorBody {
   error: { code: string; message: string };

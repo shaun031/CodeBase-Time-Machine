@@ -14,6 +14,7 @@ export function RepositoryNav({
     ["Evolution", `/repos/${repoId}/architecture/evolution`],
     ["History", `/repos/${repoId}/history`],
     ["Archaeology", `/repos/${repoId}/archaeology`],
+    ["Investigate", `/repos/${repoId}/investigate`],
     ["Commits", `/repos/${repoId}/commits`],
     ["Pull Requests", `/repos/${repoId}/pull-requests`],
     ["Issues", `/repos/${repoId}/issues`],

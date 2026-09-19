@@ -1,7 +1,7 @@
 # Historical analysis
 
 Historical analysis extends the current-code index with stable file and symbol lineage UUIDs. A
-lineage represents CodeChronicle’s deterministic best match for one logical symbol across
+lineage represents Codebase Time Machine’s deterministic best match for one logical symbol across
 commits. Versions record how the parser saw that symbol at a specific commit; events describe the
 meaningful differences between adjacent versions.
 
@@ -10,7 +10,7 @@ meaningful differences between adjacent versions.
 The service reads commits reachable from the indexed default-branch HEAD in topological,
 oldest-first order. For each commit it uses the Phase 1 changed-file rows, ignores excluded and
 unrecognized paths, reads the corresponding immutable blob, and invokes the existing Tree-sitter
-parser. Repository code is treated only as text. CodeChronicle never checks out or executes a
+parser. Repository code is treated only as text. Codebase Time Machine never checks out or executes a
 historical project, installs its dependencies, imports its modules, or invokes hooks.
 
 File lineages follow Git rename detection. Each relevant modification, rename, addition, or
@@ -34,7 +34,7 @@ match. Parent lineage IDs are stored on versions.
 
 Candidates within 0.03 confidence of a competing match are treated as ambiguous and left as
 separate lineages. Versions expose match type, confidence, and evidence. Symbol rename and move
-detection is heuristic unless Git directly supplies file rename information. CodeChronicle does
+detection is heuristic unless Git directly supplies file rename information. Codebase Time Machine does
 not claim perfect semantic history reconstruction.
 
 ## Events and time travel

@@ -60,6 +60,11 @@ import type {
   ArchitectureRule,
   ArchitectureRuleWrite,
   ArchitectureViolation,
+  Investigation,
+  InvestigationCandidate,
+  SZZResult,
+  LineHistoryResult,
+  BisectSession,
 } from "@/types/repository";
 
 export class ApiError extends Error {
@@ -78,7 +83,8 @@ function isSystemStatus(value: unknown): value is SystemStatus {
   return (
     data.backend === "ok" &&
     ["ok", "unavailable"].includes(String(data.database)) &&
-    ["ok", "unavailable", "not_required"].includes(String(data.redis))
+    ["ok", "unavailable", "not_required"].includes(String(data.redis)) &&
+    ["ok", "unavailable"].includes(String(data.ollama))
   );
 }
 
@@ -375,7 +381,7 @@ export const api = {
       `/api/repositories/${part(id)}/impact?${query}`,
     );
   },
-  getAIStatus: () => request<AIStatus>("/api/system/ai-status", {}, true),
+  getAIStatus: () => request<AIStatus>("/api/system/ai-status"),
   getRepositoryAIStatus: (id: string) =>
     request<RepositoryAIStatus>(`/api/repositories/${part(id)}/ai/status`),
   reindexAI: (id: string) =>
@@ -467,7 +473,13 @@ export const api = {
     ),
   getArchitectureEvolution: (
     id: string,
-    filters: { eventType?: string; module?: string; component?: string; fromDate?: string; toDate?: string } = {},
+    filters: {
+      eventType?: string;
+      module?: string;
+      component?: string;
+      fromDate?: string;
+      toDate?: string;
+    } = {},
   ) => {
     const query = new URLSearchParams({ limit: "500" });
     if (filters.eventType) query.set("event_type", filters.eventType);
@@ -480,9 +492,10 @@ export const api = {
     );
   },
   getArchitectureTrends: (id: string) =>
-    request<{ points: Array<Record<string, number | string>>; definitions: Record<string, string> }>(
-      `/api/repositories/${part(id)}/architecture/trends`,
-    ),
+    request<{
+      points: Array<Record<string, number | string>>;
+      definitions: Record<string, string>;
+    }>(`/api/repositories/${part(id)}/architecture/trends`),
   getArchitectureBaselines: (id: string) =>
     request<ArchitectureBaseline[]>(
       `/api/repositories/${part(id)}/architecture/baselines`,
@@ -500,7 +513,12 @@ export const api = {
       },
     ),
   getArchitectureDrift: (id: string, baselineId?: string) =>
-    request<ArchitectureComparison & { baseline: ArchitectureBaseline; policy_violations: ArchitectureViolation[] }>(
+    request<
+      ArchitectureComparison & {
+        baseline: ArchitectureBaseline;
+        policy_violations: ArchitectureViolation[];
+      }
+    >(
       `/api/repositories/${part(id)}/architecture/drift${baselineId ? `?baseline_id=${part(baselineId)}` : ""}`,
     ),
   getArchitectureRules: (id: string) =>
@@ -523,14 +541,11 @@ export const api = {
       source_match_count: number;
       target_match_count: number;
       violation_count: number;
-    }>(
-      `/api/repositories/${part(id)}/architecture/rules/validate`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rule }),
-      },
-    ),
+    }>(`/api/repositories/${part(id)}/architecture/rules/validate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ rule }),
+    }),
   deleteArchitectureRule: (id: string, ruleId: string) =>
     request<void>(
       `/api/repositories/${part(id)}/architecture/rules/${part(ruleId)}`,
@@ -538,7 +553,13 @@ export const api = {
     ),
   getArchitectureViolations: (
     id: string,
-    filters: { status?: string; rule?: string; severity?: string; fromDate?: string; toDate?: string } = {},
+    filters: {
+      status?: string;
+      rule?: string;
+      severity?: string;
+      fromDate?: string;
+      toDate?: string;
+    } = {},
   ) => {
     const query = new URLSearchParams({ limit: "500" });
     if (filters.status) query.set("status", filters.status);
@@ -550,6 +571,97 @@ export const api = {
       `/api/repositories/${part(id)}/architecture/violations?${query}`,
     );
   },
+  createInvestigation: (
+    id: string,
+    body: {
+      stack_trace?: string;
+      error_message?: string;
+      known_good_commit?: string;
+      known_bad_commit?: string;
+      file_path?: string;
+      line?: number;
+      lineage_id?: string;
+    },
+  ) =>
+    request<Investigation>(`/api/repositories/${part(id)}/investigations`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }),
+  getInvestigation: (id: string, investigationId: string) =>
+    request<Investigation>(
+      `/api/repositories/${part(id)}/investigations/${part(investigationId)}`,
+    ),
+  getInvestigationCandidates: (id: string, investigationId: string) =>
+    request<InvestigationCandidate[]>(
+      `/api/repositories/${part(id)}/investigations/${part(investigationId)}/candidates`,
+    ),
+  explainInvestigation: (
+    id: string,
+    investigationId: string,
+    question: string,
+  ) =>
+    request<AskResponse>(
+      `/api/repositories/${part(id)}/investigations/${part(investigationId)}/explain`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question }),
+      },
+    ),
+  saveInvestigationFeedback: (
+    id: string,
+    investigationId: string,
+    commit: string,
+    result: "relevant" | "not_relevant" | "unknown",
+  ) =>
+    request<{ investigation_id: string; commit_sha: string; result: string }>(
+      `/api/repositories/${part(id)}/investigations/${part(investigationId)}/feedback`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ commit_sha: commit, result }),
+      },
+    ),
+  investigateSZZ: (
+    id: string,
+    body: { fix_commit_sha: string; file_path?: string; lineage_id?: string },
+  ) =>
+    request<SZZResult>(`/api/repositories/${part(id)}/investigations/szz`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }),
+  getLineHistory: (id: string, file: string, line: number, commit?: string) => {
+    const query = new URLSearchParams({ path: file, line: String(line) });
+    if (commit) query.set("commit_sha", commit);
+    return request<LineHistoryResult>(
+      `/api/repositories/${part(id)}/line-history?${query}`,
+    );
+  },
+  createBisect: (id: string, knownGood: string, knownBad: string) =>
+    request<BisectSession>(
+      `/api/repositories/${part(id)}/investigations/bisect`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ known_good: knownGood, known_bad: knownBad }),
+      },
+    ),
+  classifyBisect: (
+    id: string,
+    bisectId: string,
+    commit: string,
+    result: "good" | "bad" | "unknown",
+  ) =>
+    request<BisectSession>(
+      `/api/repositories/${part(id)}/investigations/bisect/${part(bisectId)}/classify`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ commit_sha: commit, result }),
+      },
+    ),
 };
 export function errorMessage(error: unknown): string {
   return error instanceof ApiError

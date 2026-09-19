@@ -129,7 +129,7 @@ try {
     Write-Host 'Applying database migrations...'
     & $python -m alembic upgrade head
     if ($LASTEXITCODE -ne 0) { throw 'Database migrations failed.' }
-    Write-Host 'Starting CodeChronicle backend at http://127.0.0.1:8000'
+    Write-Host 'Starting Codebase Time Machine backend at http://127.0.0.1:8000'
     & $python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
     if ($LASTEXITCODE -ne 0) { throw "The backend exited with code $LASTEXITCODE." }
 } finally {

@@ -876,7 +876,10 @@ export interface ArchitectureComparison {
   cycles_resolved: Array<{ fingerprint: string; members: string[] }>;
   metrics_before: Record<string, number | string>;
   metrics_after: Record<string, number | string>;
-  evolution_events: Array<{ event_type: string; value: Record<string, unknown> }>;
+  evolution_events: Array<{
+    event_type: string;
+    value: Record<string, unknown>;
+  }>;
   structural_drift: {
     score: number;
     formula: string;
@@ -936,4 +939,96 @@ export interface ArchitectureViolation {
   resolved_at: string | null;
   lifetime_days: number | null;
   confidence: number;
+}
+
+export interface InvestigationCandidate {
+  rank: number;
+  commit_sha: string;
+  commit_id: string | null;
+  message: string | null;
+  committed_at?: string;
+  score: number;
+  confidence: string;
+  reasons: string[];
+  signals: Record<string, number>;
+  evidence: Array<Record<string, unknown>>;
+  files: string[];
+  symbols: string[];
+  pr_numbers: number[];
+  issue_numbers: number[];
+  pull_requests?: Array<{ number: number; title: string; html_url: string }>;
+  issues?: Array<{ number: number; title: string; html_url: string }>;
+}
+
+export interface InvestigationReport {
+  failure: {
+    exception_type: string | null;
+    error_message: string | null;
+    error_tokens: string[];
+    quoted_identifiers: string[];
+    truncated: boolean;
+  };
+  resolved_frames: Array<Record<string, unknown>>;
+  regression_range: {
+    known_good: string;
+    known_bad: string;
+    remaining_commit_count: number;
+    suggested_midpoint: Record<string, unknown> | null;
+    commits: Array<Record<string, unknown>>;
+  } | null;
+  top_candidates: InvestigationCandidate[];
+  related_prs?: Array<{ number: number; title: string; html_url: string }>;
+  related_issues?: Array<{ number: number; title: string; html_url: string }>;
+  recent_changes: Array<Record<string, unknown>>;
+  error_search_results: Array<Record<string, unknown>>;
+  dependency_context: Array<Record<string, unknown>>;
+  architecture_context: Array<Record<string, unknown>>;
+  score_formula: string;
+  score_meaning: string;
+  facts: string[];
+  limitations: string[];
+}
+
+export interface Investigation {
+  id: string;
+  repository_id: string;
+  job_id: string;
+  status: "pending" | "analyzing" | "ready" | "failed";
+  input_type: string;
+  created_at: string;
+  completed_at: string | null;
+  error: string | null;
+  result: InvestigationReport | null;
+}
+
+export interface SZZResult {
+  fix_commit_sha: string;
+  parent_commit_sha?: string;
+  candidates: InvestigationCandidate[];
+  excluded: Array<{ path?: string; commit_sha?: string; reason: string }>;
+  files_examined?: number;
+  lines_examined?: number;
+  score_definition?: string;
+  limitations: string[];
+}
+
+export interface LineHistoryResult {
+  resolution: Record<string, unknown>;
+  blame: Record<string, unknown> | null;
+  recent_commits: Array<Record<string, unknown>>;
+  historical_line_evidence: Array<Record<string, unknown>>;
+  limitations?: string[];
+}
+
+export interface BisectSession {
+  id: string;
+  repository_id: string;
+  known_good: string;
+  known_bad: string;
+  current_candidate: string | null;
+  remaining_commits: string[];
+  remaining_commit_count: number;
+  classifications: Record<string, "good" | "bad" | "unknown">;
+  status: "active" | "complete";
+  notice: string;
 }

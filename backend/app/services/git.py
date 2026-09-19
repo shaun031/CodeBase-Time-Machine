@@ -33,6 +33,8 @@ class GitBlameLine:
     author: str
     author_time: int
     source: str
+    original_line: int | None = None
+    original_path: str | None = None
 
 
 class GitService:
@@ -237,6 +239,35 @@ class GitService:
         )
         return code == 0
 
+    def get_commit_range(self, path: Path, good: str, bad: str, limit: int) -> list[str]:
+        start = self.validate_sha(good)
+        end = self.validate_sha(bad)
+        if not self.is_ancestor(path, start, end):
+            raise IngestionError(
+                "DIVERGENT_COMMIT_RANGE",
+                "Known-good must be an ancestor of known-bad.",
+                422,
+            )
+        raw, _, _ = self.runner.run(
+            [
+                "rev-list",
+                "--reverse",
+                "--ancestry-path",
+                f"--max-count={limit + 1}",
+                f"{start}..{end}",
+                "--",
+            ],
+            cwd=path,
+        )
+        commits = [self.validate_sha(value) for value in text(raw).splitlines() if value]
+        if len(commits) > limit:
+            raise IngestionError(
+                "REGRESSION_RANGE_LIMIT_REACHED",
+                "The regression range exceeds the configured commit limit.",
+                413,
+            )
+        return commits
+
     def get_commit_diff(self, path: Path, sha: str) -> tuple[str, bool]:
         commit = self.get_commit(path, sha)
         raw, truncated, _ = self.runner.run(
@@ -395,6 +426,28 @@ class GitService:
         )
         return text(raw), truncated
 
+    def get_zero_context_file_diff(
+        self, path: Path, parent_sha: str, commit_sha: str, file_path: str
+    ) -> tuple[str, bool]:
+        safe_path = self.validate_path(file_path)
+        raw, truncated, _ = self.runner.run(
+            [
+                "diff",
+                "--no-ext-diff",
+                "--no-textconv",
+                "--no-color",
+                "--unified=0",
+                self.validate_sha(parent_sha),
+                self.validate_sha(commit_sha),
+                "--",
+                safe_path,
+            ],
+            cwd=path,
+            limit=self.settings.max_diff_size_bytes,
+            truncate=True,
+        )
+        return text(raw), truncated
+
     def get_commits_touching_path(self, path: Path, file_path: str) -> list[str]:
         safe_path = self.validate_path(file_path)
         raw, _, _ = self.runner.run(
@@ -455,18 +508,34 @@ class GitService:
         result: list[GitBlameLine] = []
         current_sha = ""
         current_line = start
+        original_line: int | None = None
+        original_path: str | None = None
         author = "Unknown"
         author_time = 0
         for row in text(raw).splitlines():
-            header = re.fullmatch(r"([0-9a-f]{40}) \d+ (\d+)(?: \d+)?", row)
+            header = re.fullmatch(r"([0-9a-f]{40}) (\d+) (\d+)(?: \d+)?", row)
             if header:
                 current_sha = self.validate_sha(header.group(1))
-                current_line = int(header.group(2))
+                original_line = int(header.group(2))
+                current_line = int(header.group(3))
+                original_path = None
             elif row.startswith("author "):
                 author = row[7:]
             elif row.startswith("author-time "):
                 value = row[12:]
                 author_time = int(value) if value.lstrip("-").isdigit() else 0
+            elif row.startswith("filename "):
+                original_path = row[9:]
             elif row.startswith("\t"):
-                result.append(GitBlameLine(current_line, current_sha, author, author_time, row[1:]))
+                result.append(
+                    GitBlameLine(
+                        current_line,
+                        current_sha,
+                        author,
+                        author_time,
+                        row[1:],
+                        original_line,
+                        original_path,
+                    )
+                )
         return result

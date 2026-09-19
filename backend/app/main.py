@@ -15,6 +15,7 @@ from app.api.routes import (
     graph,
     health,
     history,
+    investigation,
     repositories,
     system,
 )
@@ -67,6 +68,7 @@ def create_app() -> FastAPI:
     app.include_router(history.router, prefix="/api")
     app.include_router(github_context.router, prefix="/api")
     app.include_router(architecture_history.router, prefix="/api")
+    app.include_router(investigation.router, prefix="/api")
     app.include_router(graph.router, prefix="/api")
     app.include_router(code.router, prefix="/api")
     return app

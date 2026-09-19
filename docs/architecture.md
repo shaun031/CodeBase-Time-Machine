@@ -1,4 +1,19 @@
-# Architecture after Phase 8
+# Architecture after Phase 9
+
+## Phase 9 investigation
+
+`InvestigationReportService` coordinates stack-frame parsing, indexed-path resolution, current
+symbol matching, blame, error-text search, regression-range analysis, and contextual evidence from
+GitHub, dependencies, and architecture events. `SZZAnalysisService` performs conservative
+first-parent analysis of changed parent lines. `RegressionAnalysisService` provides ancestry
+ranges and a persisted manual static bisect. Candidate scores order investigation work and are
+never presented as a probability or proof of causation.
+
+Investigation tasks use the same local-thread or Celery task boundary as repository indexing. The
+worker receives repository and job UUIDs and writes a structured report to PostgreSQL. Every Git
+operation uses validated commits, validated repository-relative paths, bounded output, and argument
+arrays without a shell. No analyzed repository code, test, build, script, or package manager is
+executed.
 
 ## Phase 7 archaeology
 
@@ -12,7 +27,7 @@ The additive tables are `archaeology_metrics`, `symbol_rewrite_events`,
 `copy_move_candidates`, `contributor_entity_metrics`, and `archaeology_sync_states`. They
 reference existing commits and symbol versions instead of duplicating history.
 
-CodeChronicle separates HTTP transport, task dispatch, Git access, parsing, matching,
+Codebase Time Machine separates HTTP transport, task dispatch, Git access, parsing, matching,
 persistence, GitHub enrichment, graph analysis, and UI queries. Local background threads and
 Celery workers call the same indexing services. Each task receives only repository and job UUIDs.
 
@@ -73,6 +88,8 @@ flowchart TD
 - `DependencyGraphService` serves bounded graph levels, architecture groups, metrics, coupling,
   cycles, paths, node details, and explicitly labeled potential impact.
 - `TaskExecutor` selects a local thread or Celery. Both modes invoke the same services.
+- `StackTraceParser`, `StackFrameResolver`, `ErrorSearchService`, `SZZAnalysisService`, and
+  `RegressionAnalysisService` provide the deterministic Phase 9 evidence pipeline.
 - `OllamaService` owns all local model health, model discovery, embedding, generation, timeout,
   and typed-error handling. No route calls Ollama directly.
 - `EvidenceDocumentBuilder` creates bounded, secret-filtered documents from Git, code, history,

@@ -2,6 +2,7 @@ from fastapi import APIRouter, Response
 
 from app.core.config import get_settings
 from app.schemas.health import SystemStatus
+from app.services.ai.ollama import OllamaService
 from app.services.system import check_database, check_redis
 
 router = APIRouter(prefix="/system", tags=["system"])
@@ -17,4 +18,5 @@ def system_status(response: Response) -> SystemStatus:
     return SystemStatus(
         database="ok" if database_ok else "unavailable",
         redis=("ok" if redis_ok else "unavailable") if redis_required else "not_required",
+        ollama="ok" if OllamaService().is_available() else "unavailable",
     )

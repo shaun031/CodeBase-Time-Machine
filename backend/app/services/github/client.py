@@ -40,7 +40,7 @@ class GitHubClient:
         token = self.settings.github_token.get_secret_value()
         headers = {
             "Accept": "application/vnd.github+json",
-            "User-Agent": "CodeChronicle/1.0",
+            "User-Agent": "Codebase-Time-Machine/1.0",
             "X-GitHub-Api-Version": "2022-11-28",
         }
         if token:

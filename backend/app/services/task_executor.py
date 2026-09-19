@@ -15,6 +15,7 @@ TaskName = Literal[
     "index_ai",
     "index_archaeology",
     "index_architecture_history",
+    "build_investigation",
 ]
 
 
@@ -27,6 +28,7 @@ def _run_local(task: TaskName, repository_id: UUID, job_id: UUID) -> None:
     from app.services.graph.builder import index_dependency_graph
     from app.services.historical_index import index_historical_repository
     from app.services.indexing import index_code_repository, index_repository
+    from app.services.investigation.report import build_investigation
 
     targets = {
         "index_repository": index_repository,
@@ -37,6 +39,7 @@ def _run_local(task: TaskName, repository_id: UUID, job_id: UUID) -> None:
         "index_ai": index_ai_repository,
         "index_archaeology": index_archaeology_repository,
         "index_architecture_history": index_architecture_history,
+        "build_investigation": build_investigation,
     }
     target = targets[task]
     try:
@@ -64,6 +67,7 @@ class TaskExecutor:
             analyze_graph,
             analyze_history,
             analyze_repository,
+            build_bug_investigation,
         )
 
         celery_tasks = {
@@ -75,6 +79,7 @@ class TaskExecutor:
             "index_ai": analyze_ai,
             "index_archaeology": analyze_archaeology,
             "index_architecture_history": analyze_architecture_history,
+            "build_investigation": build_bug_investigation,
         }
         celery_task = celery_tasks[task]
         celery_task.apply_async(

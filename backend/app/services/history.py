@@ -636,6 +636,8 @@ class HistoryService:
                 author=item.author,
                 author_time=datetime.fromtimestamp(item.author_time, UTC),
                 source=item.source,
+                original_line=item.original_line,
+                original_path=item.original_path,
             )
             for item in lines
         ]

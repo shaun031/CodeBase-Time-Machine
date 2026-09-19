@@ -37,6 +37,12 @@ export function Dashboard({ repoId }: { repoId: string }) {
     );
   if (!repository.data) return <p role="status">Loading repository…</p>;
   const repo = repository.data;
+  const embeddingReady = Boolean(
+    ai.data?.available && ai.data.embedding_model_available,
+  );
+  const modelsReady = Boolean(embeddingReady && ai.data?.llm_model_available);
+  const indexReady =
+    aiIndex.data?.status === "ready" && !aiIndex.data.index_stale;
   return (
     <>
       <Link href="/" className="back-link">
@@ -190,24 +196,44 @@ export function Dashboard({ repoId }: { repoId: string }) {
           <div>
             <h2>Local AI evidence index</h2>
             <p className="muted">
-              {aiIndex.data?.status === "ready" && !aiIndex.data.index_stale
-                ? `${aiIndex.data.embedded_documents.toLocaleString()} evidence documents are ready for grounded questions.`
-                : ai.data?.available
-                  ? "Build embeddings to ask questions grounded in repository history."
-                  : "AI features unavailable — Ollama is not running."}
+              {ai.isError
+                ? `Could not check Ollama status: ${errorMessage(ai.error)}`
+                : aiIndex.isError
+                  ? `Could not load the repository AI index: ${errorMessage(aiIndex.error)}`
+                  : !ai.data?.available && !ai.isPending
+                    ? "Ollama server unavailable. Check the configured local URL."
+                    : ai.data?.available && !ai.data.embedding_model_available
+                      ? `Embedding model ${ai.data.embedding_model || "(not configured)"} is not installed.`
+                      : ai.data?.available && !ai.data.llm_model_available
+                        ? `LLM model ${ai.data.llm_model || "(not configured)"} is not installed.`
+                        : aiIndex.data?.status === "ready" &&
+                            !aiIndex.data.index_stale
+                          ? `${aiIndex.data.embedded_documents.toLocaleString()} evidence documents are ready for grounded questions.`
+                          : aiIndex.data?.status === "failed"
+                            ? "AI indexing failed. Review the error and retry."
+                            : ["queued", "indexing"].includes(
+                                  aiIndex.data?.status ?? "",
+                                )
+                              ? "AI indexing is in progress."
+                              : aiIndex.data?.status === "not_indexed"
+                                ? "Repository AI index not built. Build embeddings to ask grounded questions."
+                                : "Build embeddings to ask questions grounded in repository history."}
             </p>
             {aiIndex.data?.error && (
               <p className="error-message">{aiIndex.data.error}</p>
             )}
           </div>
-          {aiIndex.data?.status === "ready" && !aiIndex.data.index_stale ? (
-            <Link className="action-link" href={`/repos/${repoId}/ask`}>
-              Ask CodeChronicle
-            </Link>
+          {indexReady ? (
+            modelsReady && (
+              <Link className="action-link" href={`/repos/${repoId}/ask`}>
+                Ask Codebase Time Machine
+              </Link>
+            )
           ) : (
             <button
               disabled={
-                !ai.data?.available ||
+                !embeddingReady ||
+                aiIndex.isError ||
                 aiReindex.isPending ||
                 ["queued", "indexing"].includes(aiIndex.data?.status ?? "")
               }

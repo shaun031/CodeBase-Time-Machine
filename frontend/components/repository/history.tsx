@@ -91,7 +91,7 @@ export function HistoryExplorer({ repoId }: { repoId: string }) {
                   : "Build the historical code index"}
           </h2>
           <p className="muted">
-            CodeChronicle reads Git objects and parses only changed source
+            Codebase Time Machine reads Git objects and parses only changed source
             files. Repository code is never executed.
           </p>
           {status.data?.progress != null && (

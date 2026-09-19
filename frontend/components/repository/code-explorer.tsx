@@ -348,13 +348,19 @@ export function CodeExplorer({ repoId }: { repoId: string }) {
                       >
                         {selectedLines
                           ? "Ask about selection"
-                          : "Ask CodeChronicle"}
+                          : "Ask Codebase Time Machine"}
                       </Link>
                       <Link
                         className="source-action-link"
                         href={`/repos/${repoId}/architecture?file=${encodeURIComponent(metadata.data.id)}`}
                       >
                         Analyze Impact
+                      </Link>
+                      <Link
+                        className="source-action-link"
+                        href={`/repos/${repoId}/investigate?file=${encodeURIComponent(metadata.data.path)}${selectedLines ? `&line=${selectedLines[0]}` : ""}${viewSha !== "HEAD" ? `&commit=${viewSha}` : ""}`}
+                      >
+                        Investigate {selectedLines ? "line" : "file"}
                       </Link>
                       <button
                         title="Copy path"

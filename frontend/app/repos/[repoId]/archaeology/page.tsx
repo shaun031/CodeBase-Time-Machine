@@ -1,5 +1,4 @@
 import { Archaeology } from "@/components/repository/archaeology";
-import { Workspace } from "@/components/repository/workspace";
 
 export default async function ArchaeologyPage({
   params,
@@ -10,9 +9,5 @@ export default async function ArchaeologyPage({
 }) {
   const { repoId } = await params;
   const { lineage_id } = await searchParams;
-  return (
-    <Workspace>
-      <Archaeology repoId={repoId} initialLineageId={lineage_id} />
-    </Workspace>
-  );
+  return <Archaeology repoId={repoId} initialLineageId={lineage_id} />;
 }

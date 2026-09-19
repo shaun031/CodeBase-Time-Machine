@@ -144,7 +144,7 @@ class EmbeddingIndexService:
             if item.content_hash == document_hashes.get(item.evidence_document_id, "")
             and item.embedding_version == version
         }
-        probe = self.ollama.embed(["CodeChronicle embedding dimension probe"])
+        probe = self.ollama.embed(["Codebase Time Machine embedding dimension probe"])
         dimension = len(probe[0])
         if expected_dimensions and expected_dimensions != {dimension}:
             session.execute(

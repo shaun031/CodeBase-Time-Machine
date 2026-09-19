@@ -12,3 +12,4 @@ class SystemStatus(BaseModel):
     backend: Literal["ok"] = "ok"
     database: Literal["ok", "unavailable"]
     redis: Literal["ok", "unavailable", "not_required"]
+    ollama: Literal["ok", "unavailable"]

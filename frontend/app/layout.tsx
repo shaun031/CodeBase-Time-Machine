@@ -3,7 +3,7 @@ import { Providers } from "@/components/providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "CodeChronicle",
+  title: "Codebase Time Machine",
   description: "A local workspace for understanding how and why code evolves.",
 };
 export default function RootLayout({

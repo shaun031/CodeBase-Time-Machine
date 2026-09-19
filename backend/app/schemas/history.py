@@ -183,6 +183,8 @@ class BlameLineRead(BaseModel):
     author: str
     author_time: datetime
     source: str
+    original_line: int | None = None
+    original_path: str | None = None
 
 
 class SymbolBlameSummary(BaseModel):

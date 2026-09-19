@@ -1,6 +1,6 @@
 # Local Ollama setup
 
-CodeChronicle uses Ollama directly over its local HTTP API. It has no cloud AI fallback and does
+Codebase Time Machine uses Ollama directly over its local HTTP API. It has no cloud AI fallback and does
 not require Ollama for Code, History, Commits, Pull Requests, Issues, or Architecture.
 
 1. Install Ollama for Windows from the official Ollama installer and start the Ollama application.
@@ -24,10 +24,11 @@ not require Ollama for Code, History, Commits, Pull Requests, Issues, or Archite
    OLLAMA_REQUEST_TIMEOUT_SECONDS=60
    ```
 
-5. Check Ollama and CodeChronicle:
+5. Check Ollama and Codebase Time Machine:
 
    ```cmd
    curl http://localhost:11434/api/tags
+   curl http://localhost:8000/api/system/status
    curl http://localhost:8000/api/system/ai-status
    ```
 
@@ -39,6 +40,11 @@ and index-version identifier. Changing `OLLAMA_EMBEDDING_MODEL` makes existing r
 indexes incompatible. Open **Ask** and rebuild the index; vectors from different models or
 dimensions are never mixed. A large repository can require substantial time and memory on its
 first embedding run. Later runs reuse documents whose normalized content hash has not changed.
+The general system status reports `ollama: ok` or `unavailable` without making Ollama a required
+backend dependency. The dedicated AI status also reports whether each configured model is installed.
+Ollama's `:latest` suffix is accepted for a model configured without a tag, such as `all-minilm`.
+Repository AI indexing is started manually from **Ask** or **Overview** after repository analysis;
+existing repositories are not automatically re-indexed.
 
 Common states:
 

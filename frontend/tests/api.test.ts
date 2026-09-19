@@ -4,7 +4,12 @@ afterEach(() => vi.unstubAllGlobals());
 
 describe("API client", () => {
   it("preserves real degraded dependency status", async () => {
-    const status = { backend: "ok", database: "unavailable", redis: "ok" };
+    const status = {
+      backend: "ok",
+      database: "unavailable",
+      redis: "ok",
+      ollama: "ok",
+    };
     vi.stubGlobal(
       "fetch",
       vi
@@ -16,12 +21,34 @@ describe("API client", () => {
     expect(await api.getSystemStatus()).toEqual(status);
   });
   it("accepts Redis as optional in native local mode", async () => {
-    const status = { backend: "ok", database: "ok", redis: "not_required" };
+    const status = {
+      backend: "ok",
+      database: "ok",
+      redis: "not_required",
+      ollama: "unavailable",
+    };
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue(new Response(JSON.stringify(status))),
     );
     expect(await api.getSystemStatus()).toEqual(status);
+  });
+  it("accepts the dedicated AI status response without system-status validation", async () => {
+    const status = {
+      provider: "ollama",
+      available: true,
+      base_url_safe: "http://127.0.0.1:11434",
+      llm_model: "qwen3:4b",
+      llm_model_available: true,
+      embedding_model: "all-minilm",
+      embedding_model_available: true,
+      message: null,
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(new Response(JSON.stringify(status))),
+    );
+    expect(await api.getAIStatus()).toEqual(status);
   });
   it("rejects unrelated errors instead of displaying healthy services", async () => {
     vi.stubGlobal(

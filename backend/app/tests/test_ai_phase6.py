@@ -11,6 +11,8 @@ from sqlalchemy import create_engine, select, text
 from sqlalchemy.orm import Session
 
 from alembic import command
+from app.api.routes import ai
+from app.api.routes.ai import repository_ai_status
 from app.core.config import Settings
 from app.db.models import (
     AIIndexState,
@@ -139,6 +141,37 @@ def test_ollama_service_lists_models_embeds_and_generates() -> None:
     assert service.generate([{"role": "user", "content": "question"}]) == '{"answer":"ok"}'
 
 
+def test_all_minilm_latest_matches_and_returns_384_dimensions() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/api/tags":
+            return httpx.Response(
+                200,
+                json={"models": [{"name": "qwen3:4b"}, {"name": "all-minilm:latest"}]},
+            )
+        return httpx.Response(200, json={"embeddings": [[0.1] * 384]})
+
+    service = OllamaService(
+        settings(ollama_llm_model="qwen3:4b", ollama_embedding_model="all-minilm"),
+        httpx.MockTransport(handler),
+    )
+    assert service.status()["available"] is True
+    assert service.status()["llm_model_available"] is True
+    assert service.status()["embedding_model_available"] is True
+    assert len(service.embed(["source evidence"])[0]) == 384
+
+
+def test_ollama_status_distinguishes_missing_models_from_unavailable_server() -> None:
+    service = OllamaService(
+        settings(ollama_llm_model="qwen3:4b", ollama_embedding_model="all-minilm"),
+        httpx.MockTransport(
+            lambda request: httpx.Response(200, json={"models": [{"name": "qwen3:4b"}]})
+        ),
+    )
+    assert service.status()["available"] is True
+    assert service.status()["llm_model_available"] is True
+    assert service.status()["embedding_model_available"] is False
+
+
 def test_ollama_unavailable_and_model_error_are_typed() -> None:
     def unavailable(request: httpx.Request) -> httpx.Response:
         raise httpx.ConnectError("refused", request=request)
@@ -233,7 +266,7 @@ class FakeBuilder:
 
 
 @pytest.mark.integration
-def test_incremental_embeddings_dimension_and_repository_isolation(ai_engine) -> None:
+def test_incremental_embeddings_dimension_and_repository_isolation(ai_engine, monkeypatch) -> None:
     first_id, second_id = uuid4(), uuid4()
     with Session(ai_engine) as session:
         first = Repository(
@@ -256,8 +289,14 @@ def test_incremental_embeddings_dimension_and_repository_isolation(ai_engine) ->
         )
         session.add_all([first, second])
         session.commit()
-        fake = FakeOllama([1.0, 0.0, 0.0])
+        monkeypatch.setattr(OllamaService, "is_available", lambda self: True)
         config = settings(ai_embedding_batch_size=4)
+        monkeypatch.setattr(ai, "get_settings", lambda: config)
+        unindexed = repository_ai_status(first_id, session)
+        assert unindexed.status == "not_indexed"
+        assert (unindexed.documents, unindexed.embedded_documents) == (0, 0)
+        vector_384 = [1.0] + [0.0] * 383
+        fake = FakeOllama(vector_384)
         job = AnalysisJob(repository_id=first_id, job_type="embedding_index", current_step="queued")
         session.add(job)
         session.commit()
@@ -266,11 +305,15 @@ def test_incremental_embeddings_dimension_and_repository_isolation(ai_engine) ->
         stored = session.scalar(
             select(EvidenceEmbedding).where(EvidenceEmbedding.repository_id == first_id)
         )
-        assert stored and stored.embedding_dimension == 3
+        assert stored and stored.embedding_dimension == 384
+        indexed = repository_ai_status(first_id, session)
+        assert indexed.status == "ready"
+        assert (indexed.documents, indexed.embedded_documents) == (1, 1)
+        assert indexed.embedding_dimension == 384
 
         job.status = JobStatus.completed
         session.commit()
-        unchanged = FakeOllama([1.0, 0.0, 0.0])
+        unchanged = FakeOllama(vector_384)
         next_job = AnalysisJob(
             repository_id=first_id, job_type="embedding_index", current_step="queued"
         )
@@ -297,9 +340,9 @@ def test_incremental_embeddings_dimension_and_repository_isolation(ai_engine) ->
                 EvidenceEmbedding(
                     repository_id=second_id,
                     evidence_document_id=other_document.id,
-                    embedding=[1.0, 0.0, 0.0],
+                    embedding=vector_384,
                     embedding_model="local-embed",
-                    embedding_dimension=3,
+                    embedding_dimension=384,
                     embedding_version="fixture",
                     content_hash=other_document.content_hash,
                 ),
@@ -309,7 +352,7 @@ def test_incremental_embeddings_dimension_and_repository_isolation(ai_engine) ->
                     documents=1,
                     embedded_documents=1,
                     embedding_model="local-embed",
-                    embedding_dimension=3,
+                    embedding_dimension=384,
                     embedding_version="fixture",
                     last_indexed_sha=second.head_sha,
                     completed_at=datetime.now(UTC),
@@ -317,7 +360,7 @@ def test_incremental_embeddings_dimension_and_repository_isolation(ai_engine) ->
             ]
         )
         session.commit()
-        retrieved, _, _ = EvidenceRetriever(session, config, FakeOllama([1.0, 0.0, 0.0])).retrieve(  # type: ignore[arg-type]
+        retrieved, _, _ = EvidenceRetriever(session, config, FakeOllama(vector_384)).retrieve(  # type: ignore[arg-type]
             first_id, AskRequest(question="unrelated archaeology"), top_k=5
         )
         assert retrieved
@@ -325,7 +368,7 @@ def test_incremental_embeddings_dimension_and_repository_isolation(ai_engine) ->
 
         next_job.status = JobStatus.completed
         session.commit()
-        changed = FakeOllama([1.0, 0.0, 0.0])
+        changed = FakeOllama(vector_384)
         changed_job = AnalysisJob(
             repository_id=first_id, job_type="embedding_index", current_step="queued"
         )
