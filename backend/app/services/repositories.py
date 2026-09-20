@@ -55,7 +55,7 @@ def submit_repository(
     logger.info("repository_submission_received")
     try:
         url = GitHubRepositoryURL.parse(value)
-        GitService().verify_remote(url)
+        remote = GitService().verify_remote(url)
     except IngestionError:
         logger.info("repository_validation_failed")
         raise
@@ -80,7 +80,13 @@ def submit_repository(
             "REPOSITORY_IDENTITY_CHANGED", "Repository identity does not match.", 409
         )
     job = active_job(session, repository.id)
-    if job is None and repository.status == RepositoryStatus.ready and not refresh:
+    remote_is_current = remote.head_sha is not None and remote.head_sha == repository.head_sha
+    if (
+        job is None
+        and repository.status == RepositoryStatus.ready
+        and not refresh
+        and remote_is_current
+    ):
         result = SubmissionResponse(repository_id=repository.id, job_id=None, status="ready")
         session.commit()
         return result

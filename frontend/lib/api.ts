@@ -10,6 +10,7 @@ import type {
   FileTreeNode,
   RepositoryFile,
   Repository,
+  RepositorySystemStatus,
   RepositoryStats,
   Submission,
   SymbolPage,
@@ -159,6 +160,10 @@ export const api = {
     }),
   getRepository: (id: string) =>
     request<Repository>(`/api/repositories/${part(id)}`),
+  getRepositorySystemStatus: (id: string) =>
+    request<RepositorySystemStatus>(
+      `/api/repositories/${part(id)}/system-status`,
+    ),
   refreshRepository: (id: string) =>
     request<Submission>(`/api/repositories/${part(id)}/refresh`, {
       method: "POST",

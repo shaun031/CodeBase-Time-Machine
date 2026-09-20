@@ -2085,6 +2085,50 @@ button:focus-visible {
   border-radius: 6px;
   background: #0d1012;
 }
+.repository-health .section-heading {
+  align-items: start;
+}
+.pipeline-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(225px, 1fr));
+  gap: 10px;
+}
+.pipeline-item {
+  display: flex;
+  min-height: 124px;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: #111719;
+}
+.pipeline-item > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: baseline;
+}
+.pipeline-item small {
+  color: var(--muted);
+}
+.pipeline-item > a {
+  margin-top: auto;
+}
+.status-pill {
+  display: inline-block;
+  padding: 2px 7px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+.status-ready { border-color: #537a62; color: #b8d5be; }
+.status-indexing, .status-queued, .status-pending, .status-syncing { border-color: #876d38; color: #e0c47d; }
+.status-failed, .status-unavailable, .status-rate_limited { border-color: #8d4e4e; color: #f0aaa4; }
+.status-stale, .status-not_indexed { border-color: #586d87; color: #acc6e4; }
 .ai-question-form > div {
   display: flex;
   justify-content: space-between;

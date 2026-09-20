@@ -3,6 +3,7 @@
 import os
 import shutil
 import subprocess
+from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
 
@@ -223,6 +224,43 @@ def test_duplicate_and_queue_failure(engine, monkeypatch):
         assert error.value.code == "QUEUE_UNAVAILABLE"
         failed = session.scalar(select(Repository).where(Repository.name == "another"))
         assert failed.status == RepositoryStatus.failed
+
+
+def test_ready_resubmission_refreshes_when_remote_head_changes(engine, monkeypatch):
+    old_head = "a" * 40
+    new_head = "b" * 40
+    monkeypatch.setattr(GitService, "verify_remote", lambda *args: RemoteInfo("main", new_head))
+    queued_jobs = []
+    monkeypatch.setattr("app.services.repositories.enqueue", lambda job: queued_jobs.append(job.id))
+    with Session(engine) as session:
+        repository = Repository(
+            owner="owner",
+            name="current-info",
+            full_name="owner/current-info",
+            url="https://github.com/owner/current-info",
+            status=RepositoryStatus.ready,
+            head_sha=old_head,
+            indexed_at=datetime.now(UTC),
+        )
+        session.add(repository)
+        session.commit()
+
+        result = submit_repository(session, repository.url)
+
+        assert result.job_id is not None
+        assert result.job_id in queued_jobs
+        assert session.get(Repository, repository.id).status == RepositoryStatus.pending
+        job = session.get(AnalysisJob, result.job_id)
+        assert job is not None and job.job_type == "repository_refresh"
+
+        job.status = JobStatus.completed
+        repository.status = RepositoryStatus.ready
+        repository.head_sha = new_head
+        session.commit()
+
+        current = submit_repository(session, repository.url)
+        assert current.status == "ready"
+        assert current.job_id is None
 
 
 def test_refresh_reuses_commits_and_reconciles_rewind(engine, local_git, monkeypatch):

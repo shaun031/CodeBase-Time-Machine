@@ -21,6 +21,32 @@ export interface Repository {
   history_total_commit_count: number;
   active_job_id: string | null;
 }
+
+export interface RepositorySubsystemStatus {
+  status: string;
+  indexed_sha: string | null;
+  progress: number | null;
+  current_step: string | null;
+  error: string | null;
+  limited: boolean;
+  job_id: string | null;
+  last_synced_at: string | null;
+  ollama_available: boolean | null;
+  detail: string | null;
+}
+
+export interface RepositorySystemStatus {
+  repository: string;
+  active_job_id: string | null;
+  git: RepositorySubsystemStatus;
+  code: RepositorySubsystemStatus;
+  history: RepositorySubsystemStatus;
+  github: RepositorySubsystemStatus;
+  graph: RepositorySubsystemStatus;
+  ai: RepositorySubsystemStatus;
+  archaeology: RepositorySubsystemStatus;
+  architecture_history: RepositorySubsystemStatus;
+}
 export interface AnalysisJob {
   id: string;
   repository_id: string | null;

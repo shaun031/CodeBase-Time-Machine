@@ -69,6 +69,25 @@ export function useRepositoryStats(id: string, enabled: boolean) {
     enabled,
   });
 }
+export function useRepositorySystemStatus(id: string, enabled = true) {
+  return useQuery({
+    queryKey: ["repository-system-status", id],
+    queryFn: () => api.getRepositorySystemStatus(id),
+    enabled,
+    refetchInterval: (query) =>
+      Object.values(query.state.data ?? {}).some(
+        (value) =>
+          typeof value === "object" &&
+          value !== null &&
+          "status" in value &&
+          ["indexing", "queued", "pending", "syncing"].includes(
+            String(value.status),
+          ),
+      )
+        ? 3000
+        : false,
+  });
+}
 export function useCodeStats(id: string, enabled = true) {
   return useQuery({
     queryKey: ["code-stats", id],

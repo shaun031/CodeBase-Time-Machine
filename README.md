@@ -13,10 +13,10 @@ Instead of only showing what the code looks like today, it analyzes the history 
 
 It acts like a **time machine for a software repository**.
 
-Phase 9 also provides a deterministic investigation workspace for stack traces, suspected fix
-commits, known-good/known-bad ranges, and individual source lines. It ranks evidence-backed commit
-candidates, supports conservative SZZ analysis and manual static bisect, and never executes code
-from the analyzed repository.
+The investigation workspace accepts stack traces, suspected fix commits, known-good/known-bad
+ranges, and individual source lines. It ranks evidence-backed commit candidates, supports
+conservative SZZ analysis and manual static bisect, and never executes code from the analyzed
+repository.
 
 ---
 

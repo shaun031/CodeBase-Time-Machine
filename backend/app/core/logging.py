@@ -11,7 +11,15 @@ class JsonFormatter(logging.Formatter):
             "event": record.getMessage(),
         }
         # Only explicitly approved context fields are serialized. No exception payloads or URLs.
-        for field in ("repository_id", "job_id", "commit_sha", "request_id"):
+        for field in (
+            "repository_id",
+            "job_id",
+            "commit_sha",
+            "request_id",
+            "task",
+            "duration_seconds",
+            "status",
+        ):
             if hasattr(record, field):
                 payload[field] = str(getattr(record, field))
         return json.dumps(payload)

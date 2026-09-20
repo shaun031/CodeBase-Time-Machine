@@ -112,6 +112,23 @@ def test_grouping_layers_inheritance_and_external_names():
     assert builder._inheritance_candidates(inherited) == [("UserService", "INHERITS")]
 
 
+def test_duplicate_symbol_names_receive_unique_deterministic_graph_names():
+    source = file("frontend/js/api.js")
+    first = symbol(source, "list")
+    second = symbol(source, "list")
+    third = symbol(source, "create")
+    first.start_line = 10
+    second.start_line = 30
+    third.start_line = 50
+
+    names = GraphBuilder._symbol_qualified_names([first, second, third], {source.id: source.path})
+
+    assert names[first.id] == "frontend/js/api.js::list@10:1#1"
+    assert names[second.id] == "frontend/js/api.js::list@30:1#2"
+    assert names[third.id] == "frontend/js/api.js::create"
+    assert len(set(names.values())) == 3
+
+
 def test_local_html_and_css_references_are_safe_and_exact():
     paths = {
         "web/index.html",

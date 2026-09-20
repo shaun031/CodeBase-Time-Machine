@@ -65,7 +65,7 @@ export default function Home() {
       </header>
       <main id="main-content">
         <div className="workspace-label mono">
-          <span className="dot online" /> PHASE 2 <span>/</span> CODE EXPLORER
+          <span className="dot online" /> CODE EXPLORER
         </div>
         <section className="intro">
           <h1>

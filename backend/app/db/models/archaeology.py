@@ -33,7 +33,7 @@ class ArchaeologyMetric(Base):
         ForeignKey("repositories.id", ondelete="CASCADE"), index=True
     )
     entity_type: Mapped[str] = mapped_column(String(20), index=True)
-    entity_id: Mapped[uuid.UUID] = mapped_column(index=True)
+    entity_id: Mapped[uuid.UUID] = mapped_column()
     name: Mapped[str] = mapped_column(Text)
     path: Mapped[str | None] = mapped_column(Text)
     kind: Mapped[str | None] = mapped_column(String(30))
@@ -164,9 +164,9 @@ class ArchaeologySyncState(Base):
     rewrites_detected: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     copy_candidates: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     contributors: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
-    last_indexed_sha: Mapped[str | None] = mapped_column(String(40))
+    last_indexed_sha: Mapped[str | None] = mapped_column(String(40), index=True)
     job_id: Mapped[uuid.UUID | None] = mapped_column(
-        ForeignKey("analysis_jobs.id", ondelete="SET NULL")
+        ForeignKey("analysis_jobs.id", ondelete="SET NULL"), index=True
     )
     error: Mapped[str | None] = mapped_column(Text)
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

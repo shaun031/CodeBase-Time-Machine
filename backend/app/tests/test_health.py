@@ -2,7 +2,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from app.api.routes import system
+from app.api.routes import repositories, system
 from app.core.exceptions import NotFoundError, register_exception_handlers
 
 
@@ -67,6 +67,13 @@ def test_system_status_reports_ollama_failure_without_degrading_backend(client, 
     assert response.json()["database"] == "ok"
     assert response.json()["redis"] == "not_required"
     assert response.json()["ollama"] == "unavailable"
+
+
+def test_repository_system_status_normalizes_independent_index_states():
+    assert repositories._state_status("ready", "same", "same") == "ready"
+    assert repositories._state_status("ready", "old", "new") == "stale"
+    assert repositories._state_status("syncing", None, None) == "indexing"
+    assert repositories._state_status("ready", None, None, error="safe error") == "failed"
 
 
 def test_cors(client):

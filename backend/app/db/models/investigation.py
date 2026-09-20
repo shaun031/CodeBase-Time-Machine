@@ -11,14 +11,17 @@ from app.db.base import Base
 
 class Investigation(Base):
     __tablename__ = "investigations"
-    __table_args__ = (Index("ix_investigations_repo_created", "repository_id", "created_at"),)
+    __table_args__ = (
+        Index("ix_investigations_repo_created", "repository_id", "created_at"),
+        Index("ix_investigations_job_id", "job_id"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     repository_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("repositories.id", ondelete="CASCADE"), index=True
     )
     job_id: Mapped[uuid.UUID | None] = mapped_column(
-        ForeignKey("analysis_jobs.id", ondelete="SET NULL"), unique=True, index=True
+        ForeignKey("analysis_jobs.id", ondelete="SET NULL"), unique=True
     )
     status: Mapped[str] = mapped_column(String(20), default="pending", index=True)
     input_type: Mapped[str] = mapped_column(String(40))
@@ -77,4 +80,3 @@ class InvestigationCandidateFeedback(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
-

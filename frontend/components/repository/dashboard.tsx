@@ -10,11 +10,13 @@ import {
   useAIReindex,
   useAIStatus,
   useRepositoryAIStatus,
+  useRepositorySystemStatus,
 } from "@/hooks/use-repository";
 import { api, errorMessage } from "@/lib/api";
 import { dateLabel, submissionPath } from "@/lib/repository";
 import { QueryError } from "./workspace";
 import { RepositoryNav } from "./repository-nav";
+import type { RepositorySubsystemStatus } from "@/types/repository";
 
 export function Dashboard({ repoId }: { repoId: string }) {
   const repository = useRepository(repoId);
@@ -30,6 +32,7 @@ export function Dashboard({ repoId }: { repoId: string }) {
   const ai = useAIStatus();
   const aiIndex = useRepositoryAIStatus(repoId);
   const aiReindex = useAIReindex();
+  const systemStatus = useRepositorySystemStatus(repoId, Boolean(repository.data));
   const router = useRouter();
   if (repository.isError)
     return (
@@ -43,6 +46,34 @@ export function Dashboard({ repoId }: { repoId: string }) {
   const modelsReady = Boolean(embeddingReady && ai.data?.llm_model_available);
   const indexReady =
     aiIndex.data?.status === "ready" && !aiIndex.data.index_stale;
+  const pipeline: Array<[string, RepositorySubsystemStatus, string]> = systemStatus.data
+    ? [
+        ["Git history", systemStatus.data.git, `/repos/${repoId}/commits`],
+        ["Code analysis", systemStatus.data.code, `/repos/${repoId}/code`],
+        ["Symbol history", systemStatus.data.history, `/repos/${repoId}/history`],
+        [
+          "GitHub context",
+          systemStatus.data.github,
+          `/repos/${repoId}/pull-requests`,
+        ],
+        [
+          "Dependency graph",
+          systemStatus.data.graph,
+          `/repos/${repoId}/architecture`,
+        ],
+        ["AI evidence index", systemStatus.data.ai, `/repos/${repoId}/ask`],
+        [
+          "Software archaeology",
+          systemStatus.data.archaeology,
+          `/repos/${repoId}/archaeology`,
+        ],
+        [
+          "Architecture history",
+          systemStatus.data.architecture_history,
+          `/repos/${repoId}/architecture/evolution`,
+        ],
+      ]
+    : [];
   return (
     <>
       <Link href="/" className="back-link">
@@ -91,6 +122,36 @@ export function Dashboard({ repoId }: { repoId: string }) {
           )}
         </section>
       )}
+      <section className="history-panel repository-health" aria-labelledby="repository-health-title">
+        <div className="section-heading">
+          <div>
+            <h2 id="repository-health-title">Repository health</h2>
+            <p className="muted">Each index is independent. A partial failure does not block the rest of the repository.</p>
+          </div>
+          {systemStatus.data?.active_job_id && (
+            <Link href={`/repos/${repoId}/indexing?job=${systemStatus.data.active_job_id}`}>View active job →</Link>
+          )}
+        </div>
+        {systemStatus.isError ? (
+          <QueryError error={systemStatus.error} retry={() => systemStatus.refetch()} />
+        ) : systemStatus.isPending ? (
+          <p role="status">Checking repository indexes…</p>
+        ) : systemStatus.data ? (
+          <div className="pipeline-grid">
+            {pipeline.map(([name, item, href]) => {
+              const action = item.status === "not_indexed" ? "Build index" : item.status === "stale" ? "Reindex" : item.status === "failed" ? "Retry" : null;
+              return <article key={name as string} className="pipeline-item">
+                <div><strong>{name}</strong><span className={`status-pill status-${item.status}`}>{item.status.replaceAll("_", " ")}</span></div>
+                {item.current_step && <small>{item.current_step}{item.progress !== null ? ` · ${Math.round(item.progress)}%` : ""}</small>}
+                {item.detail && <small>{item.detail}</small>}
+                {item.limited && <small>Results are limited to configured safe bounds.</small>}
+                {item.error && <small className="error-message">{item.error}</small>}
+                {item.status === "unavailable" ? <small>Local AI is unavailable; other pages remain usable.</small> : action ? <Link href={href}>{action} →</Link> : <Link href={href}>Open →</Link>}
+              </article>;
+            })}
+          </div>
+        ) : null}
+      </section>
       <dl className="metadata-grid">
         <div>
           <dt>Default branch</dt>

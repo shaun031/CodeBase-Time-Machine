@@ -1,4 +1,16 @@
-# Phase 5 verification
+# Verification
+
+## Final integration update — 2026-09-19
+
+The repository health endpoint and dashboard pipeline were added without a database migration.
+It reads existing independently-owned state rows and reports partial failures without changing
+their data. The standard verification command remains `./scripts/check.ps1`; it does not require
+live GitHub or Ollama. The optional `./scripts/check.ps1 -Integration` run requires an isolated,
+migrated PostgreSQL `TEST_DATABASE_URL`.
+
+The final integration run recorded the backend type check as successful for 132 application source
+files. The Phase 10 frontend type check, lint, unit tests, and production build are recorded below
+only after the commands complete in this working tree.
 
 Verified on 2026-09-12 on Windows with Python 3.13.2, Node 22.20.0, Docker Desktop,
 PostgreSQL 17 with pgvector, and the native local-task execution mode.

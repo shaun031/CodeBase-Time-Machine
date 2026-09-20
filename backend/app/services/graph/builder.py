@@ -1,7 +1,7 @@
 import logging
 import re
 import time
-from collections import defaultdict
+from collections import Counter, defaultdict
 from datetime import UTC, datetime
 from pathlib import PurePosixPath
 from typing import Any
@@ -125,6 +125,37 @@ class GraphBuilder:
             result.extend((name.strip(), "IMPLEMENTS") for name in implements.group(1).split(","))
         return [(name, kind) for name, kind in result if name]
 
+    @staticmethod
+    def _symbol_qualified_names(
+        symbols: list[CodeSymbol], path_by_file: dict[UUID, str]
+    ) -> dict[UUID, str]:
+        """Return deterministic, unique graph names for indexed symbols.
+
+        Some parsers intentionally emit a short qualified name for object-literal
+        methods. A file can therefore contain several distinct symbols named
+        ``list`` or ``create``. Dependency nodes have a repository/type/name
+        uniqueness constraint, so those symbols need a source-location suffix.
+        Unique symbols retain their original name to keep existing node IDs stable.
+        """
+        bases = {
+            symbol.id: f"{path_by_file[symbol.file_id]}::{symbol.qualified_name}"
+            for symbol in symbols
+        }
+        counts = Counter((symbol.kind, bases[symbol.id]) for symbol in symbols)
+        occurrences: dict[tuple[str, str], int] = defaultdict(int)
+        result: dict[UUID, str] = {}
+        for symbol in symbols:
+            base = bases[symbol.id]
+            key = (symbol.kind, base)
+            if counts[key] == 1:
+                result[symbol.id] = base
+                continue
+            occurrences[key] += 1
+            result[symbol.id] = (
+                f"{base}@{symbol.start_line}:{symbol.start_column}#{occurrences[key]}"
+            )
+        return result
+
     def run(self, session: Session, repository: Repository, job: AnalysisJob) -> None:
         if repository.status != RepositoryStatus.ready or not repository.head_sha:
             raise IngestionError("CODE_INDEX_NOT_READY", "Build the current code index first.", 409)
@@ -232,11 +263,12 @@ class GraphBuilder:
         assert all(file_nodes.values())
         symbol_nodes: dict[UUID, DependencyNode] = {}
         path_by_file = {file.id: file.path for file in files}
+        symbol_qualified_names = self._symbol_qualified_names(symbols, path_by_file)
         for symbol in symbols:
             created = node(
                 symbol.kind,
                 symbol.name,
-                f"{path_by_file[symbol.file_id]}::{symbol.qualified_name}",
+                symbol_qualified_names[symbol.id],
                 file_id=symbol.file_id,
                 symbol_id=symbol.id,
                 metadata={"lineage_id": str(symbol.lineage_id) if symbol.lineage_id else None},

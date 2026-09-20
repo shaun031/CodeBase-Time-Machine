@@ -401,6 +401,18 @@ beforeEach(() => {
     ollama: "unavailable",
   });
   vi.spyOn(api, "getRepository").mockResolvedValue(repo);
+  vi.spyOn(api, "getRepositorySystemStatus").mockResolvedValue({
+    repository: "ready",
+    active_job_id: null,
+    git: { status: "ready", indexed_sha: repo.head_sha, progress: null, current_step: null, error: null, limited: false, job_id: null, last_synced_at: null, ollama_available: null, detail: null },
+    code: { status: "ready", indexed_sha: repo.head_sha, progress: null, current_step: null, error: null, limited: false, job_id: null, last_synced_at: null, ollama_available: null, detail: "1 files, 1 symbols" },
+    history: { status: "ready", indexed_sha: repo.head_sha, progress: 100, current_step: null, error: null, limited: false, job_id: null, last_synced_at: null, ollama_available: null, detail: null },
+    github: { status: "not_indexed", indexed_sha: null, progress: null, current_step: null, error: null, limited: false, job_id: null, last_synced_at: null, ollama_available: null, detail: null },
+    graph: { status: "not_indexed", indexed_sha: null, progress: null, current_step: null, error: null, limited: false, job_id: null, last_synced_at: null, ollama_available: null, detail: null },
+    ai: { status: "unavailable", indexed_sha: null, progress: null, current_step: null, error: null, limited: false, job_id: null, last_synced_at: null, ollama_available: false, detail: null },
+    archaeology: { status: "not_indexed", indexed_sha: null, progress: null, current_step: null, error: null, limited: false, job_id: null, last_synced_at: null, ollama_available: null, detail: null },
+    architecture_history: { status: "not_indexed", indexed_sha: null, progress: null, current_step: null, error: null, limited: false, job_id: null, last_synced_at: null, ollama_available: null, detail: null },
+  });
   vi.spyOn(api, "getAIStatus").mockResolvedValue({
     provider: "ollama",
     available: false,

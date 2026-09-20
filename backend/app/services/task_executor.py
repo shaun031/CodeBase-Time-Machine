@@ -1,5 +1,6 @@
 import logging
 import threading
+from time import perf_counter
 from typing import Literal
 from uuid import UUID
 
@@ -42,10 +43,28 @@ def _run_local(task: TaskName, repository_id: UUID, job_id: UUID) -> None:
         "build_investigation": build_investigation,
     }
     target = targets[task]
+    started = perf_counter()
     try:
         target(get_engine(), repository_id, job_id)
+        logger.info(
+            "background_task_completed",
+            extra={
+                "task": task,
+                "repository_id": repository_id,
+                "job_id": job_id,
+                "duration_seconds": round(perf_counter() - started, 3),
+            },
+        )
     except Exception:
-        logger.exception("local_background_task_failed")
+        logger.exception(
+            "local_background_task_failed",
+            extra={
+                "task": task,
+                "repository_id": repository_id,
+                "job_id": job_id,
+                "duration_seconds": round(perf_counter() - started, 3),
+            },
+        )
 
 
 class TaskExecutor:
